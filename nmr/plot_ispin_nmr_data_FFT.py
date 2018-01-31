@@ -18,7 +18,7 @@ import matplotlib.mlab as mlab
 fname = "T1_sweep00.txt"
 
 # The factor by which the frequency scale is expanded around f=0
-sf = 1
+sf = 1.  # PK CHANGE: Converted sf from int to float
 
 print 'filename = ', fname
 infile = open(fname,"r")
@@ -103,11 +103,11 @@ ax2.set_xlabel('Frequency ('+np.str(funits)+')',fontsize=14)
 ax2.set_ylabel('Signal',fontsize=14)
 
 # specify the plot limits
-[fmin,fmax] = [f[0]/sf,f[-1]/sf]
+[fmin, fmax] = [f[0]/sf, f[-1]/sf]
 ax2.set_xlim(fmin*fscale,fmax*fscale)
 
 '''
 Display or save the Figure
 '''
-plt.show()                                      
+plt.show()
 #plt.savefig(fname.replace(".txt",".png"),format='png')
