@@ -14,16 +14,16 @@ REM FILENAME is the name of the output file the data will be acquired data will 
 set FILENAME=T1_sweep
 
 REM SPECTROMETER_FREQUENCY (MHz) must be between 0 and 100.
-set SPECTROMETER_FREQUENCY=21.12
+set SPECTROMETER_FREQUENCY=21.15
 
 REM SPECTRAL_WIDTH (kHz) must be between 0.150 and 10000.  Equals the number of points acquired per millisecond.
-set SPECTRAL_WIDTH=100
+set SPECTRAL_WIDTH=30
 
 REM P1_TIME (microseconds): 180 degree pulse time (must be at least 0.065). 
-set P1_TIME=8.8
+set P1_TIME=10.25
 
 REM P2_TIME (microseconds): 90 degree pulse time (must be at least 0.065). 
-set P2_TIME=4.4
+set P2_TIME=5.5
 
 REM RINGDOWN_TIME (microseconds) (must be atleast 0.065).
 set RINGDOWN_TIME=50
@@ -35,13 +35,13 @@ REM P2_PHASE (degrees): Output (Tx) phase of 90 degree pulse.
 set P2_PHASE=15.0
 
 REM FID_TIME (microseconds): Time used to record FID after second (90 degree) pulse.  Should be longer then the decay time of the FID.
-set FID_TIME=10000
+set FID_TIME=30000
 
 REM TAU_MIN (microseconds): Minimum value of tau. Must be at least 0.065.  
-set TAU_MIN=10000
+set TAU_MIN=1000
 
 REM DELTA_TAU (microseconds): Increment in tau.
-set DELTA_TAU=10000
+set DELTA_TAU=50000
 
 REM N_TAU (must be integer > 0): Number of values of TAU.  Tau_i = Tau_min + i*DELTA_TAU for i = 0 to N_TAU-1 
 set N_TAU=30
