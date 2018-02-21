@@ -53,7 +53,7 @@ bw = 30000.000 #float(text2[4:index2]) # This gives the bandwidth
 # print 'bw = ',bw
 # print '1/bw = ',1/bw  # Note that the time interval between points is 1/bw
 
-# Read the data from the the file starting on line 2
+# Read the data from the the file starting on line 1
 s1 = mlab.csv2rec(fname, skiprows=0)
 s1 = s1[:-4] #because we have weird size mismatch
 
