@@ -3,14 +3,20 @@ This routine reads in a spincore ".txt" file, and plots the data as well as the
 fft of the data in that file
 
 Last update:  2/20/2012, 10/7/2012 by Tycho Sleator
+Feb 2018 by Kaitlyn and Patrick
 '''
 
 import numpy as np
 import scipy as sp
+import sympy as sm
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.integrate as integrate
+
+
+# Allows LaTeX output in Jupyter and in matplotlib
+sm.init_printing(use_latex=True, use_unicode=True)
 
 '''
 Array y is considered a function of array x
@@ -73,7 +79,7 @@ directory = "data/fid/"
 filename = "fid0.txt"
 fname = directory+filename
 print "filename = ",fname
-plot_title='Free Induction Decay'
+plot_title='Free Induction Decay with\n Pulse Time = 5 $\mu s$\n Spectral Width = 100 kHz\n Spectrometer Frequency = 21.15 MHz'
 
 # read data from file
 (t,za) = read_data_file(fname)
@@ -113,12 +119,13 @@ pow = np.floor(np.log10(maxza))  # next power of 10 less than max
 '''
 CREATE THE FIGURE
 '''
-fig1   = plt.figure(figsize=(8,10))
+# fig1   = plt.figure(figsize=(8,10))
+ax1 = plt.axes()
 
 plt.title('{0}'.format(plot_title))
 
-ax1    = fig1.add_subplot(211)  # this will show that time data
-ax2    = fig1.add_subplot(212)  # this will show the frequency data
+#ax1    = fig1.add_subplot(211)  # this will show that time data
+# ax2    = fig1.add_subplot(212)  # this will show the frequency data
 
 '''
 Plot the Time Data:
@@ -141,7 +148,7 @@ ax1.plot(t*tscale,np.sqrt(za.real**2 + za.imag**2)/10**pow, '-k', label='Magnitu
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
-ax1.set_ylabel('Signal (x 10^'+str(int(pow))+')',fontsize=14)
+ax1.set_ylabel('Signal (x $10^'+str(int(pow))+ '$)',fontsize=14)
 ax1.legend()
 
 # specify the plot limits
@@ -151,22 +158,22 @@ ax1.set_xlim(t[0]*tscale,t[-1]*tscale)
 Plot the Frequency Data:
 '''
 # draw x and y axes
-ax2.axhline(color ='k')
-ax2.axvline(color ='k')
+# ax2.axhline(color ='k')
+# ax2.axvline(color ='k')
 
-# plot the points
-ax2.plot(f*fscale,fza.real, '-b', label='Real Part')  # plot the real part (blue)
-ax2.plot(f*fscale,fza.imag, '-r', label='Imaginary Part')  # plot the imaginary part (red)
-ax2.plot(f*fscale,np.sqrt(fza.real**2 + fza.imag**2), '-k', label='Magnitude')  # plot the magnitude (black)
+# # plot the points
+# ax2.plot(f*fscale,fza.real, '-b', label='Real Part')  # plot the real part (blue)
+# ax2.plot(f*fscale,fza.imag, '-r', label='Imaginary Part')  # plot the imaginary part (red)
+# ax2.plot(f*fscale,np.sqrt(fza.real**2 + fza.imag**2), '-k', label='Magnitude')  # plot the magnitude (black)
 
-# label the axes and display the legend
-ax2.set_xlabel('Frequency ('+np.str(funits)+')',fontsize=14)
-ax2.set_ylabel('Signal',fontsize=14)
-ax2.legend()
+# # label the axes and display the legend
+# ax2.set_xlabel('Frequency ('+np.str(funits)+')',fontsize=14)
+# ax2.set_ylabel('Signal',fontsize=14)
+# ax2.legend()
 
-# specify the plot limits
-[fmin,fmax] = [f[0]/20,f[-1]/20]
-ax2.set_xlim(fmin*fscale,fmax*fscale)
+# # specify the plot limits
+# [fmin,fmax] = [f[0]/20,f[-1]/20]
+# ax2.set_xlim(fmin*fscale,fmax*fscale)
 
 
 '''
