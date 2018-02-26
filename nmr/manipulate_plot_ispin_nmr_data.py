@@ -137,6 +137,7 @@ funits = 'kHz'
 # plot the points
 ax1.plot(t*tscale,za.real/10**pow, '-b', label='Real Part')  # plot the real part (blue)
 ax1.plot(t*tscale,za.imag/10**pow, '-r', label='Imaginary Part')  # plot the imaginary part (red)
+ax1.plot(t*tscale,np.sqrt(za.real**2 + za.imag**2)/10**pow, '-k', label='Magnitude') # plot the magnitude (black)
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
