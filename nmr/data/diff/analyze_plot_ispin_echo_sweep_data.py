@@ -11,14 +11,20 @@ The array can be pasted into a fitting program, such as
 'NMR_diffusion_fit_array.py' for further analysis.
 
 Last update:  10/07/2012 at 12:47 pm by Tycho Sleator
+Amended by Patrick Anker & Kaitlyn Morrell (02/28/2018)
 '''
 
 import numpy as np
-import scipy as sp
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.integrate as integrate
+
+# PK: Changed file handling for more flexibility
+import sys
+import os
+import glob
+# PK: Removed unused matplotlib and scipy imports
+
 
 '''
 THE FOLLOWING ARE FUNCTION DEFINITIONS
@@ -30,17 +36,19 @@ Integrate y as function of x in the range of x1 to x2,
 def intsimps(y,x,x1,x2):
     x0 = x[0]
     xmax = x[-1]
-    dx = x[1] - x[0]  
-    i1 = np.floor((x1-x0)/dx)  # index of starting value of x
-    i2 = np.floor((x2-x0)/dx) # index of ending value of x
-#    print 'i1 = ',i1, ' : i2 = ',i2
+    dx = x[1] - x[0]
+    # PK: Ensure datatype is int for indexing; np.floor() does not return int
+    i1 = int(np.floor((x1-x0)/dx))  # index of starting value of x
+    i2 = int(np.floor((x2-x0)/dx))  # index of ending value of x
+
     return integrate.simps(y[i1:i2],None,dx)
 
-'''
+
+"""
 This reads in complex data from a file and outputs a tuple (t,za),
 where t is the time data and za is an array of complex numbers 
 corresponding to the time data
-'''
+"""
 def read_data_file(fname):
     infile = open(fname,"r")
     text = infile.read()      # read file into a string
@@ -77,54 +85,66 @@ def read_data_file(fname):
 '''
 EXECUTION BEGINS HERE
 '''
-# The following is the root filename containing the data
-rootname = "hahn_echo" # PK: "_sweep" -> nothing
-taumin = 10 # minimum value of tau
-Ntaus = 14  # of different values of tau (delays from tau to Ntau*tau)
-Delta_tau = 10
-taus = taumin + Delta_tau * np.arange(Ntaus) # list of values of tau
-#taus = tau*np.arange(1,Ntaus+1)
-fnums = range(Ntaus)  # file numbers (range from 0 to 19)
+# PK: Changed from file-based search to directory-based search for different datasets
+def main(argv):
+    if len(argv) == 0:
+        raise Exception("No data directory specified. Terminating...")
+    else:
+        for directory in argv:
+            path = os.path.join(os.getcwd(), directory)
 
-print 'taus = ',list(taus)
-print 'fnums = ',fnums
+            # Ensure directory exists
+            if not os.path.exists(path):
+                print("Directory \"{}\" does not exist.".format(directory))
+                continue
+            else:
+                process_directory(sorted(glob.glob("{}/*.txt".format(path))))
+                plt.show()  # Draw all plots
 
-echos = [];  #initialize array of echosizes
+def process_directory(files):
+    taumin    = 10  # Minimum value of tau (ms)
+    N_taus    = 14  # Number of taus to process
+    Delta_tau = 10  # Step increase of tau (ms)
 
-for fnum in fnums:    
-    fname = rootname+str(100+fnum)[1:]+'.txt'  # generate the filename
-    print 'filename = ', fname
-	
-    # read data from file
-    (t,za) = read_data_file(fname)
-    bw = 1/(t[1]-t[0])
-    npts = len(t)
-    
-    echosize = intsimps(abs(za),t,0.017,0.023) # compute the 'size' of the echo
-    echos.append(echosize)  # add to the array of echo sizes
-    print 'echosize =', echosize
-rechos = echos/(max(echos))
-print 'taus = ', list(taus)
-print 'echo sizes = ',list(echos)
-print 'relative echo sizes = ',list(rechos)
-           
-'''
-CREATE THE FIGURE
-'''
-fig1   = plt.figure(figsize=(8,5))
-# draw x and y axes
-plt.axhline(color ='k')
-plt.axvline(color ='k')
-#
-# plot the points
-plt.plot(taus,rechos, 'ob')  # plot the real part (blue)
-#
-## label the axes
-plt.xlabel('Echo Delay $\\tau$ (ms)',fontsize=14)
-plt.ylabel('Relative Echo Size' ,fontsize=14)
-#
-# specify the plot limits
-plt.ylim(0,1.05)
-#
-#Display the Figure
-plt.show()                                      
+    taus  = taumin + Delta_tau * np.arange(N_taus)
+    files = files[:N_taus]  # Filter the files to the number required
+
+    echos = []
+
+    for fname in files:    
+        # read data from file
+        print("Reading: {}".format(fname))
+        (t, za) = read_data_file(fname)
+        bw = 1/(t[1]-t[0])
+        npts = len(t)
+        
+        echosize = intsimps(abs(za),t,0.017,0.023) # compute the 'size' of the echo
+        echos.append(echosize)  # add to the array of echo sizes
+        print('echosize =', echosize)
+
+    rechos = echos/(max(echos))
+    print('taus = ', list(taus))
+    print('echo sizes = ',list(echos))
+    print('relative echo sizes = ',list(rechos))
+               
+    '''
+    CREATE THE FIGURE
+    '''
+    fig1   = plt.figure(figsize=(8,5))
+    # draw x and y axes
+    plt.axhline(color ='k')
+    plt.axvline(color ='k')
+    #
+    # plot the points
+    plt.plot(taus,rechos, 'ob')  # plot the real part (blue)
+    #
+    ## label the axes
+    plt.xlabel('Echo Delay $\\tau$ (ms)',fontsize=14)
+    plt.ylabel('Relative Echo Size' ,fontsize=14)
+    #
+    # specify the plot limits
+    plt.ylim(0,1.05)
+    #
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
