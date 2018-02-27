@@ -3,7 +3,7 @@ This routine reads in a spincore ".txt" file, and plots the data as well as the
 fft of the data in that file
 
 Last update:  2/20/2012, 10/7/2012 by Tycho Sleator
-Feb 2018 by Kaitlyn and Patrick
+Ammended Feb 2018 by Kaitlyn and Patrick
 '''
 
 import numpy as np
