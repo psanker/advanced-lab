@@ -25,7 +25,6 @@ import os
 import glob
 # PK: Removed unused matplotlib and scipy imports
 
-
 '''
 THE FOLLOWING ARE FUNCTION DEFINITIONS
 '''
@@ -33,15 +32,15 @@ THE FOLLOWING ARE FUNCTION DEFINITIONS
 Array y is considered a function of array x
 Integrate y as function of x in the range of x1 to x2, 
 '''
-def intsimps(y,x,x1,x2):
+def intsimps(y, x, x1, x2):
     x0 = x[0]
-    xmax = x[-1]
+
     dx = x[1] - x[0]
     # PK: Ensure datatype is int for indexing; np.floor() does not return int
     i1 = int(np.floor((x1-x0)/dx))  # index of starting value of x
     i2 = int(np.floor((x2-x0)/dx))  # index of ending value of x
 
-    return integrate.simps(y[i1:i2],None,dx)
+    return integrate.simps(y[i1:i2], None, dx)
 
 
 """
@@ -50,7 +49,7 @@ where t is the time data and za is an array of complex numbers
 corresponding to the time data
 """
 def read_data_file(fname):
-    infile = open(fname,"r")
+    infile = open(fname, "r")
     text = infile.read()      # read file into a string
     infile.close()
 
@@ -68,27 +67,32 @@ def read_data_file(fname):
 
     # print 'npts = ',npts
 
-    t =  (1/bw)*np.arange(npts)  #time data
+    t =  (1/bw)*np.arange(npts) # time data
 
     # assign the data to variables with shorter names
     s = s1['data']
-    rs = s.reshape(-1,2) 
-    rtp= np.transpose(rs) # rtp[0] is the real part and rtp[1] is the imaginary 
-                          # part of the data
+    rs = s.reshape(-1, 2) 
+    rtp = np.transpose(rs) # rtp[0] is the real part and rtp[1] is the imaginary 
+                           # part of the data
 
-    return (t,(rtp[0] + rtp[1]*1j)) # create complex array
+    return (t, (rtp[0] + rtp[1]*1j)) # create complex array
 
 # rotate data in complex plane 
 #theta = -0.0*np.pi
-#za = np.exp(1j*theta)*(rtp[0] + rtp[1]*1j) # create complex array
+# za = np.exp(1j*theta)*(rtp[0] + rtp[1]*1j) # create complex array
 
 '''
 EXECUTION BEGINS HERE
 '''
+def help():
+    return "Usage: python <script name> <directory name>"
+
 # PK: Changed from file-based search to directory-based search for different datasets
 def main(argv):
     if len(argv) == 0:
-        raise Exception("No data directory specified. Terminating...")
+        print("No directory given")
+        print(help())
+        return
     else:
         for directory in argv:
             path = os.path.join(os.getcwd(), directory)
@@ -111,39 +115,39 @@ def process_directory(files):
 
     echos = []
 
-    for fname in files:    
+    for fname in files: 
         # read data from file
         print("Reading: {}".format(fname))
         (t, za) = read_data_file(fname)
         bw = 1/(t[1]-t[0])
         npts = len(t)
-        
+
         echosize = intsimps(abs(za),t,0.017,0.023) # compute the 'size' of the echo
         echos.append(echosize)  # add to the array of echo sizes
         print('echosize =', echosize)
 
     rechos = echos/(max(echos))
     print('taus = ', list(taus))
-    print('echo sizes = ',list(echos))
-    print('relative echo sizes = ',list(rechos))
-               
+    print('echo sizes = ', list(echos))
+    print('relative echo sizes = ', list(rechos))
+
     '''
     CREATE THE FIGURE
     '''
-    fig1   = plt.figure(figsize=(8,5))
+    plt.figure(figsize=(8, 5))
     # draw x and y axes
-    plt.axhline(color ='k')
-    plt.axvline(color ='k')
+    plt.axhline(color='k')
+    plt.axvline(color='k')
     #
     # plot the points
-    plt.plot(taus,rechos, 'ob')  # plot the real part (blue)
+    plt.plot(taus, rechos, 'ob')  # plot the real part (blue)
     #
     ## label the axes
-    plt.xlabel('Echo Delay $\\tau$ (ms)',fontsize=14)
-    plt.ylabel('Relative Echo Size' ,fontsize=14)
+    plt.xlabel('Echo Delay $\\tau$ (ms)', fontsize=14)
+    plt.ylabel('Relative Echo Size', fontsize=14)
     #
     # specify the plot limits
-    plt.ylim(0,1.05)
+    plt.ylim(0, 1.05)
     #
 
 if __name__ == "__main__":
