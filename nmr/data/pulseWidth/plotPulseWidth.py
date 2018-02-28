@@ -1,5 +1,5 @@
 '''
-his file is derived from the file 'manipulate_plot_ispin_nmr_data.py'.
+This file is derived from the file 'manipulate_plot_ispin_nmr_data.py'.
 (which was previously updated:  10/7/2012 by Tycho Sleator)
 
 This routine reads in a csv file, and plots the data
@@ -79,7 +79,6 @@ pow = np.floor(np.log10(maxza))  # next power of 10 less than max
 '''
 CREATE THE FIGURE
 '''
-# fig1   = plt.figure(figsize=(8,10))
 ax1 = plt.axes()
 
 plt.title('{0}'.format(plot_title))
