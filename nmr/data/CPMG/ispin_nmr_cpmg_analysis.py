@@ -139,8 +139,8 @@ Plot the data obtained from the iSpin Labview interface
 plt.figure(1, figsize = (6,5) )
 
 # draw x and y axes
-sp1.axhline(color ='r')
-sp1.axvline(color ='r')
+sp1.axhline(color ='k')
+sp1.axvline(color ='k')
 #print 'len(az.real)=',len(za.real)
 #print 'len(t)=',len(t)
 
@@ -165,8 +165,8 @@ sp1.set_xlim(t[0],t[-1])
 #plt.figure(2, figsize = (8,5) )
 
 # draw x and y axes
-sp2.axhline(color ='r')
-sp2.axvline(color ='r')
+sp2.axhline(color ='k')
+sp2.axvline(color ='k')
 #print 'len(az.real)=',len(za.real)
 #print 'len(t)=',len(t)
 
