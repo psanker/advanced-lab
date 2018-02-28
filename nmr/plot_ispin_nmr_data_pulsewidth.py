@@ -95,11 +95,12 @@ tscale = 1e3   # change time units to msec
 tunits = 'msec'
 pi2_pulse = t[A.argmax()]*tscale
 pi_pulse  = 11.25*tscale
+pulse_uncertainty = 500*tscale / 2 #500microsec from spincore graph precision
 
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
-ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} ms'.format(pi2_pulse))
-ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} ms'.format())
+ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} $\pm$ {} ms'.format(pi2_pulse, pulse_uncertainty))
+ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} $\pm$ {} ms'.format(pi_pulse, pulse_uncertainty))
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
