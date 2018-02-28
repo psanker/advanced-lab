@@ -59,7 +59,7 @@ Begin Execution Here
 
 # The following is the filename containing the data
 directory = "data/pulseWidth/"
-filename = "pulsewidthfind.csv"
+filename = "pulsewidthfind2.csv"
 fname = directory+filename
 print "filename = ",fname
 plot_title='Pulse Width'

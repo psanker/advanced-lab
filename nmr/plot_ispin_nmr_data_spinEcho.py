@@ -99,7 +99,7 @@ tauTime = tscale*tau#t[A.argmax()]
 
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
-ax1.axvline(tauTime, ls='--',color='g',alpha=.5,label='$\\tau$ = {} ms'.format(tauTime))
+ax1.axvline(tauTime, ls='--',color='g',alpha=.5,label='$\\tau$ = {:.3e} ms'.format(tauTime))
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
