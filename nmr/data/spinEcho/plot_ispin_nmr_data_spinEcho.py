@@ -1,8 +1,7 @@
 '''
-This file is derived from the file 'manipulate_plot_ispin_nmr_data.py'.
-(which was previously updated:  10/7/2012 by Tycho Sleator)
+This file is derived from the file 'plot_ispin_nmr_csv.py'.
 
-This routine reads in a csv file, and plots the data
+This routine reads in a spinEcho csv file of SpinCore data, plots it and identifies the value of tau
 
 Amended Feb 2018 by Kaitlyn and Patrick
 '''
@@ -20,14 +19,14 @@ import scipy.integrate as integrate
 sm.init_printing(use_latex=True, use_unicode=True)
 
 '''
-This reads in complex data from a file and outputs a tuple (t,za), where t is the time data and za is an array of complex numbers corresponding to the time data
+This reads in complex data from a file and outputs a tuple (t,za,s), where t is the time data, za is an array of complex numbers corresponding to the time data, and s is the amplitude of the raw signal
 '''
-def read_data_file(fname):
+def read_data_file(fname, bw):
     infile = open(fname,"r")
     text = infile.read()      # read file into a string
     infile.close()
 
-    bw = 100000.000# This gives the bandwidth
+    # bw = 30000.000# This gives the bandwidth
     print 'bw = ',bw
     print '1/bw = ',1/bw  # Note that the time interval between points is 1/bw
 
@@ -37,7 +36,7 @@ def read_data_file(fname):
 
     print 'npts = ',npts
 
-    t =  s1['pulse_width_us__plot_0']  #time data
+    t =  s1['time_us__plot_0']  #time data
 
     # assign the data to variables with shorter names
     s = s1['amplitude__plot_0']
@@ -59,14 +58,15 @@ Begin Execution Here
 '''
 
 # The following is the filename containing the data
-directory = ""
-filename = "pulsewidthfind.csv"
+directory = "data/spinEcho/"
+filename = "echo1_tau3750.csv"
 fname = directory+filename
 print "filename = ",fname
-plot_title='Pulse Width'
+plot_title='Spin Echo'
+bandwidth = 30000.000 #Hz
 
 # read data from file
-(t,za,A) = read_data_file(fname)
+(t,za,A) = read_data_file(fname, bandwidth)
 bw = 1/(t[1]-t[0])
 npts = len(t)
 
@@ -92,15 +92,15 @@ ax1.axvline(color ='k')
 print 'len(az.real)=',len(za.real)
 print 'len(t)=',len(t)
 
-tscale = 1e3   # change time units to msec
+tscale = 1e-3   # change time units to msec
 tunits = 'msec'
 pi2_pulse = t[A.argmax()]*tscale
-pi_pulse  = 11.25*tscale
+# pi_pulse  = 11.25*tscale
 
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
 ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} ms'.format(pi2_pulse))
-ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} ms'.format(10250.0))
+# ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} ms'.format(10250.0))
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)

@@ -28,7 +28,7 @@ Set the folowing parameters based on values from SpinCore LabView interface
 ###########################################################################
 '''
 fname = "cpmgTau3750-5pts.csv" # This is the filename containing the data
-tau = 3750e-6     # Obtained from value of tau in SpinCore LabView interface
+tau = 3750e-6     #(sec) Obtained from value of tau in SpinCore LabView interface
 numave = 5            # Number of points/echo, or number of adjacent points to
                       # average.  Obtained from SpinCore LabView interface
 T2_0 = 0.01           # Initial guess for T2 (seconds)
@@ -49,7 +49,7 @@ infile.close()
 #text2 = text[index:-1]    # Create new string beginning at "@SW="
 #index2 = text2.find('\n') # Find the next CR in this string
 # print 'text=',text2[0:index2]
-bw = 30000.000 #float(text2[4:index2]) # This gives the bandwidth
+bw = 30000.000 #(Hz) float(text2[4:index2]) # This gives the bandwidth
 # print 'bw = ',bw
 # print '1/bw = ',1/bw  # Note that the time interval between points is 1/bw
 
