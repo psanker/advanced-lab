@@ -99,7 +99,7 @@ pi_pulse  = 11.25*tscale
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
 ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} ms'.format(pi2_pulse))
-ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} ms'.format(10250.0))
+ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} ms'.format())
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)

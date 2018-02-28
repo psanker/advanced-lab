@@ -64,6 +64,7 @@ fname = directory+filename
 print "filename = ",fname
 plot_title='Spin Echo'
 bandwidth = 30000.000 #Hz
+tau = 3750 #microsec
 
 # read data from file
 (t,za,A) = read_data_file(fname, bandwidth)
@@ -94,7 +95,7 @@ print 'len(t)=',len(t)
 
 tscale = 1e3   # change time units to msec
 tunits = 'msec'
-tauTime = t[A.argmax()]*tscale
+tauTime = tscale*tau#t[A.argmax()]
 
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
