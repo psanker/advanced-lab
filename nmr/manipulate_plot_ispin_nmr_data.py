@@ -75,11 +75,11 @@ Begin Execution Here
 '''
 
 # The following is the filename containing the data
-directory = "data/fid/"
-filename = "fid0.txt"
+directory = "data/pulseWidth/"
+filename = "findpulsewidth.txt"
 fname = directory+filename
 print "filename = ",fname
-plot_title='Free Induction Decay with\n Pulse Time = 5 $\mu s$\n Spectral Width = 100 kHz\n Spectrometer Frequency = 21.15 MHz'
+plot_title='Pulse Width'
 
 # read data from file
 (t,za) = read_data_file(fname)
