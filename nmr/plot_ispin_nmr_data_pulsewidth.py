@@ -95,7 +95,7 @@ tscale = 1e3   # change time units to msec
 tunits = 'msec'
 pi2_pulse = t[A.argmax()]*tscale
 pi_pulse  = 11.25*tscale
-pulse_uncertainty = 500*tscale / 2 #500microsec from spincore graph precision
+pulse_uncertainty = 1*tscale #microsec from spincore graph precision
 
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
