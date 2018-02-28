@@ -6,11 +6,12 @@ Last update:  2/20/2012, 10/7/2012 by Tycho Sleator
 '''
 
 import numpy as np
-import scipy as sp
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.integrate as integrate
+
+import re
+import os
 
 '''
 Array y is considered a function of array x
@@ -41,14 +42,14 @@ def read_data_file(fname):
     index2 = text2.find('\n') # Find the next CR in this string
     #print 'text=',text2[0:index2]
     bw = float(text2[4:index2]) # This gives the bandwidth
-    print 'bw = ',bw
-    print '1/bw = ',1/bw  # Note that the time interval between points is 1/bw
+    print('bw = ',bw)
+    print('1/bw = ',1/bw)  # Note that the time interval between points is 1/bw
 
     # Read the data from the the file starting on line 13
     s1 = mlab.csv2rec(fname, skiprows=12)  
     npts = len(s1)/2  # number of complex data points
 
-    print 'npts = ',npts
+    print('npts = ',npts)
 
     t =  (1/bw)*np.arange(npts)  #time data
 
@@ -68,100 +69,99 @@ def read_data_file(fname):
 Begin Execution Here
 '''
 
-# The following is the filename containing the data
-directory = ""
-filename = "stim_echo_sweep01.txt"
-fname = directory+filename
-print "filename = ",fname
+# PK: Better file reading algorithm: looks for text files matching pattern and reads them in
+filebase = "stim_echo_sweep"
+files    = [f for f in os.listdir(os.getcwd()) if re.search(r"{}(\d+).txt$".format(filebase), f)]
 
-# read data from file
-(t,za) = read_data_file(fname)
-bw = 1/(t[1]-t[0])
-npts = len(t)
+for fname in sorted(files):
+    print(fname)
+    # read data from file
+    (t,za) = read_data_file(fname)
+    bw = 1/(t[1]-t[0])
+    npts = len(t)
 
-'''
-Between the comment signs, we do things to the time signal before taking the fft
+    '''
+    Between the comment signs, we do things to the time signal before taking the fft
 
-npts = 2*npts
-za = np.append(za,0*za)
-#za = np.append(za,0*za)
-t =  (1/bw)*np.arange(npts)  #time data
+    npts = 2*npts
+    za = np.append(za,0*za)
+    #za = np.append(za,0*za)
+    t =  (1/bw)*np.arange(npts)  #time data
 
-sigma = 1.8/1000.
+    sigma = 1.8/1000.
 
-za = za*np.exp(-t**2/(2*sigma**2))
+    za = za*np.exp(-t**2/(2*sigma**2))
 
 
-Between the comment signs, we do things to the time signal before taking the fft
-'''
+    Between the comment signs, we do things to the time signal before taking the fft
+    '''
 
-fza = np.fft.fftshift(np.fft.fft(za))  # take the fft to get the frequency spectrum
-f = (bw/npts)*np.arange(npts)-bw/2     # array of frequencies
+    fza = np.fft.fftshift(np.fft.fft(za))  # take the fft to get the frequency spectrum
+    f = (bw/npts)*np.arange(npts)-bw/2     # array of frequencies
 
-# Integrate over the frequency data
+    # Integrate over the frequency data
 
-fintegral = intsimps(fza,f,1709-10000,1709+10000)
-print 're(freq integral)/10**12 = ', fintegral.real/10**12
-print 'im(freq integral)/10**12 = ', fintegral.imag/10**12
+    fintegral = intsimps(fza,f,1709-10000,1709+10000)
+    print('re(freq integral)/10**12 = ', fintegral.real/10**12)
+    print('im(freq integral)/10**12 = ', fintegral.imag/10**12)
 
-# get maximum value of the data
-maxza = np.max([max(za.real),max(za.imag)])  # maximum value
+    # get maximum value of the data
+    maxza = np.max([max(za.real),max(za.imag)])  # maximum value
 
-pow = np.floor(np.log10(maxza))  # next power of 10 less than max
+    pow = np.floor(np.log10(maxza))  # next power of 10 less than max
 
-'''
-CREATE THE FIGURE
-'''
-fig1   = plt.figure(figsize=(8,10))
-ax1    = fig1.add_subplot(211)  # this will show that time data
-ax2    = fig1.add_subplot(212)  # this will show the frequency data
+    '''
+    CREATE THE FIGURE
+    '''
+    fig1   = plt.figure(figsize=(8,10))
+    ax1    = fig1.add_subplot(211)  # this will show that time data
+    ax2    = fig1.add_subplot(212)  # this will show the frequency data
 
-'''
-Plot the Time Data:
-'''
-# draw x and y axes
-ax1.axhline(color ='k')
-ax1.axvline(color ='k')
-print 'len(az.real)=',len(za.real)
-print 'len(t)=',len(t)
+    '''
+    Plot the Time Data:
+    '''
+    # draw x and y axes
+    ax1.axhline(color ='k')
+    ax1.axvline(color ='k')
+    print('len(az.real)=',len(za.real))
+    print('len(t)=',len(t))
 
-tscale = 1000.0   # change time units to msec
-tunits = 'msec'
-fscale = 1/tscale
-funits = 'khz'
+    tscale = 1000.0   # change time units to msec
+    tunits = 'msec'
+    fscale = 1/tscale
+    funits = 'khz'
 
-# plot the points
-ax1.plot(t*tscale,za.real/10**pow, '-b')  # plot the real part (blue)
-ax1.plot(t*tscale,za.imag/10**pow, '-r')  # plot the imaginary part (red)
+    # plot the points
+    ax1.plot(t*tscale,za.real/10**pow, '-b')  # plot the real part (blue)
+    ax1.plot(t*tscale,za.imag/10**pow, '-r')  # plot the imaginary part (red)
 
-# label the axes
-ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
-ax1.set_ylabel('Signal (x 10^'+str(int(pow))+')',fontsize=14)
+    # label the axes
+    ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
+    ax1.set_ylabel('Signal (x 10^'+str(int(pow))+')',fontsize=14)
 
-# specify the plot limits
-ax1.set_xlim(t[0]*tscale,t[-1]*tscale)
+    # specify the plot limits
+    ax1.set_xlim(t[0]*tscale,t[-1]*tscale)
 
-'''
-Plot the Frequency Data:
-'''
-# draw x and y axes
-ax2.axhline(color ='k')
-ax2.axvline(color ='k')
+    '''
+    Plot the Frequency Data:
+    '''
+    # draw x and y axes
+    ax2.axhline(color ='k')
+    ax2.axvline(color ='k')
 
-# plot the points
-ax2.plot(f*fscale,fza.real, '-b')  # plot the real part (blue)
-ax2.plot(f*fscale,fza.imag, '-r')  # plot the imaginary part (red)
-#ax2.plot(f*fscale,np.sqrt(fza.real**2 + fza.imag**2), '-k')  # plot the magnitude (black)
+    # plot the points
+    ax2.plot(f*fscale,fza.real, '-b')  # plot the real part (blue)
+    ax2.plot(f*fscale,fza.imag, '-r')  # plot the imaginary part (red)
+    #ax2.plot(f*fscale,np.sqrt(fza.real**2 + fza.imag**2), '-k')  # plot the magnitude (black)
 
-# label the axes
-ax2.set_xlabel('Frequency ('+np.str(funits)+')',fontsize=14)
-ax2.set_ylabel('Signal',fontsize=14)
+    # label the axes
+    ax2.set_xlabel('Frequency ('+np.str(funits)+')',fontsize=14)
+    ax2.set_ylabel('Signal',fontsize=14)
 
-# specify the plot limits
-[fmin,fmax] = [f[0]/20,f[-1]/20]
-ax2.set_xlim(fmin*fscale,fmax*fscale)
+    # specify the plot limits
+    [fmin,fmax] = [f[0]/20,f[-1]/20]
+    ax2.set_xlim(fmin*fscale,fmax*fscale)
 
-'''
-Display the Figure
-'''
-plt.show()                                      
+    # PK: Save all figures instead of drawing one at a time
+    plt.savefig(re.sub(r"\.txt", "", fname) + ".png")
+    plt.close()
