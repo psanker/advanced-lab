@@ -69,7 +69,7 @@ import matplotlib.mlab as mlab
 import scipy.integrate as integrate
 import scipy.optimize
 
-import glob, os
+import glob
 
 '''
 Define exponential function for fit to data
@@ -85,8 +85,8 @@ def intsimps(y,x,x1,x2):
     x0 = x[0]
     xmax = x[-1]
     dx = x[1] - x[0]  
-    i1 = np.floor((x1-x0)/dx)  # index of starting value of x
-    i2 = np.floor((x2-x0)/dx) # index of ending value of x
+    i1 = int(np.floor((x1-x0)/dx))  # index of starting value of x
+    i2 = int(np.floor((x2-x0)/dx)) # index of ending value of x
     return integrate.simps(y[i1:i2],None,dx)
 
 '''
@@ -176,7 +176,7 @@ def plotfid(t, za, f, fza, sf, fname):
     Display or save the Figure
     '''
 #    plt.show()   
-    plt.savefig(fname.replace(".txt",".png"),format='png')
+    # plt.savefig(fname.replace(".txt",".png"),format='png')
     plt.close()  # remove the current figure from memory
 
 '''
@@ -206,13 +206,13 @@ def complexArrayToReal(zsignal):
     # print 'zsignal = ', zsignal
     # rotangle is the angle for rotation of first point of zsignal onto negative
     # real axis.
-    print 'Rotation angles of consecutive data points:'
-    print '-------------------------------------------'
+    print('Rotation angles of consecutive data points:')
+    print('-------------------------------------------')
     rotangle = np.pi - np.angle(zsignal[0]) # rotate to negative real axis
     if rotangle > np.pi:              # this statement is not necessary, but it
         rotangle = rotangle - 2*np.pi # keeps the angles between -180 and +180
                                       
-    print 'rotation angle = {: 2.2f} degrees'.format((180/np.pi) * rotangle)
+    print('rotation angle = {: 2.2f} degrees'.format((180/np.pi) * rotangle))
 
     # rotate all points in the array by this angle.
     zsignal = np.exp(1j * rotangle)*zsignal
@@ -222,7 +222,7 @@ def complexArrayToReal(zsignal):
     
         # return smallest angle that rotates i'th element to real axis
         rotangle = angleRotateReal(zsignal[i]) 
-        print 'rotation angle = {: 2.2f} degrees'.format((180/np.pi) * rotangle)
+        print('rotation angle = {: 2.2f} degrees'.format((180/np.pi) * rotangle))
 
         ## limit rotation angle to 45 degrees (pi/4)        
         #if np.abs(rotangle) > np.pi/4:
@@ -275,11 +275,11 @@ fnumbers = range(0, n_tau)
 # The following reads in FID data, takes FFT, plots data and FFT, 
 # integrates FFT and appends complex valued integral to array zsignal
 
-print '\nFile Name                Frequency Integral/10^12'
-print '---------                ------------------------'
+print('\nFile Name                Frequency Integral/10^12')
+print('---------                ------------------------')
 
 # PK: New directory iteration
-for fname in glob.glob('*.txt'):
+for fname in sorted(glob.glob('*.txt')):
     # read data from file 
     (t,za) = read_data_file(fname)
     bw = 1/(t[1]-t[0])
@@ -296,8 +296,7 @@ for fname in glob.glob('*.txt'):
     
     # Integrate over the frequency data
     fintegral = intsimps(fza,f,f_min,f_max)
-    print fname,': {: 1.3e} + {: 1.3e}j'\
-        .format(fintegral.real/10**12,fintegral.imag/10**12)
+    print(fname,': {: 1.3e} + {: 1.3e}j'.format(fintegral.real/10**12,fintegral.imag/10**12))
         
     # Add the integrated signal to the "signal" vs "tau" data
     signal = np.append(signal, fintegral.real/10**12)
@@ -330,13 +329,13 @@ for fname in glob.glob('*.txt'):
 #    signal = np.append(signal, fintegral.real/10**12)
 #    zsignal = np.append(zsignal, fintegral/10**12)
 
-print "\n complex t1 data:\n-------------------\n ",zsignal
-print "number of points = ",len(signal)
-print "\n"
+print("\n complex t1 data:\n-------------------\n ",zsignal)
+print("number of points = ",len(signal))
+print("\n")
 
 realsignal = complexArrayToReal(zsignal)
 
-print "\n real t1 data:\n-------------------\n ",realsignal
+print("\n real t1 data:\n-------------------\n ",realsignal)
 
 # values of tao for which data were taken
 tau_max = tau_min + delta_tau * (n_tau - 1)  # maximum value of tau 
@@ -359,13 +358,13 @@ Asig_nlfit =  np.sqrt(nlpcov[0][0])
 T1sig_nlfit = np.sqrt(nlpcov[1][1])
 y0sig_nlfit = np.sqrt(nlpcov[2][2])
 
-print '\n'
-print '================================='
-print '       Fit Paremeters    '
-print '  T1 = {: 1.2f}   +- {:1.2f} ms'.format(T1_nlfit,T1sig_nlfit)
-print '  A  = {: 1.2e} +- {:1.1e}'.format(A_nlfit,Asig_nlfit)
-print '  y0 = {: 1.2e} +- {:1.1e}'.format(y0_nlfit,y0sig_nlfit)
-print '================================='
+print('\n')
+print('=================================')
+print('       Fit Paremeters    ')
+print('  T1 = {: 1.2f}   +- {:1.2f} ms'.format(T1_nlfit,T1sig_nlfit))
+print('  A  = {: 1.2e} +- {:1.1e}'.format(A_nlfit,Asig_nlfit))
+print('  y0 = {: 1.2e} +- {:1.1e}'.format(y0_nlfit,y0sig_nlfit))
+print('=================================')
 
 # draw the figure of signal vs. tau
 final = plt.figure(figsize=(8,5))
