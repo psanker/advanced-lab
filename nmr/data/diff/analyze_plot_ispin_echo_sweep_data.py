@@ -18,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.integrate as integrate
+import scipy.optimize as opt
 
 # PK: Changed file handling for more flexibility
 import sys
@@ -85,27 +86,39 @@ def read_data_file(fname):
 EXECUTION BEGINS HERE
 '''
 def help():
-    return "Usage: python <script name> <directory name>"
+    return "Usage: python <script name> [fit] <directory name>\nIf you want to fit the data from a directory, include the word \"fit\" in one of the arguments after the script file name"
 
 # PK: Changed from file-based search to directory-based search for different datasets
 def main(argv):
+    fit  = False
+    dirs = [] # Directories to process
+
     if len(argv) == 0:
         print("No directory given")
         print(help())
         return
     else:
-        for directory in argv:
-            path = os.path.join(os.getcwd(), directory)
+        for arg in argv:
+            path = os.path.join(os.getcwd(), arg)
+
+            # Check if "fit" is provided
+            if arg == "fit":
+                print("Will fit data...")
+                fit = True
 
             # Ensure directory exists
-            if not os.path.exists(path):
-                print("Directory \"{}\" does not exist.".format(directory))
+            elif not os.path.exists(path):
+                print("Directory \"{}\" does not exist.".format(arg))
                 continue
             else:
-                process_directory(sorted(glob.glob("{}/*.txt".format(path))))
-                plt.show()  # Draw all plots
+                dirs.append(path)
 
-def process_directory(files):
+        for _dir in dirs:
+            process_directory(sorted(glob.glob("{}/*.txt".format(_dir))), fit, _dir)
+
+        plt.show() # Draw all plots
+
+def process_directory(files, fit, dirname):
     taumin    = 10  # Minimum value of tau (ms)
     N_taus    = 14  # Number of taus to process
     Delta_tau = 10  # Step increase of tau (ms)
@@ -119,8 +132,6 @@ def process_directory(files):
         # read data from file
         print("Reading: {}".format(fname))
         (t, za) = read_data_file(fname)
-        bw = 1/(t[1]-t[0])
-        npts = len(t)
 
         echosize = intsimps(abs(za),t,0.017,0.023) # compute the 'size' of the echo
         echos.append(echosize)  # add to the array of echo sizes
@@ -149,6 +160,122 @@ def process_directory(files):
     # specify the plot limits
     plt.ylim(0, 1.05)
     #
+
+    if fit:
+        print("Fitting dir \"{}\"...".format(dirname))
+        fit_data(taus, rechos, dirname)
+
+def fit_data(taus, rels, fname):
+    t = 1e-3 * np.array(taus)
+    s = rels
+
+
+    '''
+    -- information on nonlinear curve fitting --
+
+    nlfit,nlpcov = scipy.optimize.curve_fit(f, xdata, ydata, p0=[a0, b0, ...],
+      sigma=None, **kwargs)
+
+    * f(xdata, a, b, ...): is the fitting function where xdata is an array of values
+       of the independent variable and a, b, ... are the fitting parameters, however
+       many there are, listed as separate arguments.  f(xdata, a, b, ...) should
+       return the y value of the fitting function.
+    * xdata: is the array containing the x data.
+    * ydata: is the array containing the y data.
+    * p0: is a tuple containing the initial guesses for the fitting parameters. The
+      guesses for the fitting parameters are set equal to 1 if they are left
+      unspecified.
+    * sigma: is the array containing the uncertainties in the y data.
+    * **kwargs: are keyword arguments that can be passed to the fitting routine
+      numpy.optimize.leastsq that curve_fit calls. These are usually left unspecified.
+
+    '''
+    # Define nonlinear fitting function.
+    def f(t, A, alpha, y0):
+        return A*np.exp(-(alpha*(t**3))) + y0
+
+    # Initial guesses: modify these if fit doesn't converge.
+    A0 = 1.0
+    alpha0 = 10**(3)
+    y00 = 0.0
+
+    # This is the function that does the nonlinear fit:
+    #nlfit, nlpcov = scipy.optimize.curve_fit(f, t, s, p0=[A0, gamma0, y00], sigma=None)
+    nlfit, nlpcov = opt.curve_fit(f, t, s, p0=[A0, alpha0, y00], sigma=None)
+
+    # These are the parameter estimates (assigned to more readible names):
+    A_nlfit = nlfit[0]
+    alpha_nlfit = nlfit[1]
+    y0_nlfit = nlfit[2]
+
+    '''
+    Below are the uncertainties in the estimates:  (note that "nlpcov" is the
+    "covariance matrix".  the diagonal elements of the covariance matrix (nlpcov[i][i])
+    are the variances of the fit parameters, whose square roots give the standard
+    deviation or uncertainties in the fit parameters.  The off-diagonal elements give
+    the correlations between fit parameters.
+    '''
+    Asig_nlfit =  np.sqrt(nlpcov[0][0])
+    alphasig_nlfit = np.sqrt(nlpcov[1][1])
+    y0sig_nlfit = np.sqrt(nlpcov[2][2])
+
+    '''
+    The following statements generate formatted output of the fit parameters.
+    The number before the colon refers to the sequence of arguments in the .format
+    command.  In "{0:6.3f}", the 0 refers to the first argument in the .format()
+    command, the 6 refers to the total width of the field, and the 3 refers to the
+    number of digits after the decimal point.
+    See http://docs.python.org/tutorial/inputoutput.html for more information.
+    '''
+
+    # Compute reduced chi square for nonlinear fit.
+    #redchisqrNL = (((s - f(t, A_nlfit, alpha_nlfit, y0_nlfit))/sigs)**2).sum()/float(len(t)-2)
+
+    # Create an array of times t for the purpose of plotting the fit:
+    tfit = np.arange(0.0, t[-1] + (t[1]-t[0])/2, 0.0001)
+
+    # Generate y-values from parameters determined from the curve fit, so that
+    # we can plot the fit on top of the data:
+    sfit = f(tfit, A_nlfit, alpha_nlfit, y0_nlfit)
+
+    # Create the figure:
+    fig = plt.figure(1, figsize = (8,4.5) )
+
+    # Draw x and y axes:
+    plt.axhline(color ='k')
+    plt.axvline(color ='k')
+
+    # Plot the points:
+    plt.plot(t, s, 'ob', label='Data')
+    # Include error bars:
+    #plt.errorbar(t, s, sigs, fmt='bo')
+
+    # Plot the fit:
+    plt.plot(tfit,sfit,'r', label='Fit')
+
+    # Plot the legend:
+    plt.legend(loc='upper right' )
+
+    # Plot some text with model equation and values of fit parameters.
+    # Use Latex equation style - $ ... $:
+    plt.text(0.010, 0.4, '$y \, =\, A e^{-\\alpha t^3} + y_0$', ha='left', va='bottom', size='large')
+    plt.text(0.010, 0.3, '$\\alpha \, =\, ({0:6.4g} \pm {1:5.2g})/s^3$'.format(alpha_nlfit, alphasig_nlfit), ha='left', va='bottom', size='large')
+    plt.text(0.010, 0.2, '$A  \, =\, {0:6.3g} \pm  {1:6.1g}$'.format(A_nlfit, Asig_nlfit), ha='left', va='bottom', size='large')
+    plt.text(0.010, 0.1, '$y_0 \, =\, {0:6.3g} \pm {1:6.1g}$'.format(y0_nlfit, y0sig_nlfit), ha='left', va='bottom', size='large')
+
+
+    # Label the axes:
+    plt.xlabel('Time (s)', fontsize=14)
+    plt.ylabel('Echo Amplitude', fontsize=14)
+
+    # Specify the plot limits:
+    #plt.xlim(0.0,max(t))
+    plt.xlim(0.0,t[-1] + (t[1]-t[0])/2)
+    plt.ylim(-0.05,1.05)
+
+    # Save figure
+    plt.savefig(fname)
+    plt.close(fig)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
