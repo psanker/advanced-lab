@@ -16,11 +16,11 @@ import os
 
 '''
 Array y is considered a function of array x
-We integrate y as function of x in the range of x1 to x2, 
+We integrate y as function of x in the range of x1 to x2,
 '''
 def intsimps(y, x, x1, x2):
     x0 = x[0]
-    dx = x[1] - x[0]  
+    dx = x[1] - x[0]
     # PK: Ensure indexes are integer types
     i1 = int(np.floor((x1-x0)/dx))  # index of starting value of x
     i2 = int(np.floor((x2-x0)/dx)) # index of ending value of x
@@ -30,7 +30,7 @@ def intsimps(y, x, x1, x2):
 
 '''
 This reads in complex data from a file and outputs a tuple (t,za),
-where t is the time data and za is an array of complex numbers 
+where t is the time data and za is an array of complex numbers
 corresponding to the time data
 '''
 def read_data_file(fname):
@@ -47,21 +47,21 @@ def read_data_file(fname):
     print('1/bw = ', 1./bw)  # Note that the time interval between points is 1/bw
 
     # Read the data from the the file starting on line 13
-    s1 = mlab.csv2rec(fname, skiprows=12)  
+    s1 = mlab.csv2rec(fname, skiprows=12)
     npts = len(s1)/2  # number of complex data points
 
     print('npts = ', npts)
 
-    t =  (1/bw)*np.arange(npts)  #time data
+    t =  (1/bw)*np.arange(npts)  # time data
 
     # assign the data to variables with shorter names
     s = s1['data']
-    rs = s.reshape(-1, 2) 
+    rs = s.reshape(-1, 2)
     rtp = np.transpose(rs) # rtp[0] is the real part and rtp[1] is the imaginary part of the data
 
     return (t, (rtp[0] + rtp[1]*1j)) # create complex array
 
-# rotate data in complex plane 
+# rotate data in complex plane
 #theta = -0.0*np.pi
 #za = np.exp(1j*theta)*(rtp[0] + rtp[1]*1j) # create complex array
 
@@ -122,14 +122,14 @@ for fname in sorted(files):
     Plot the Time Data:
     '''
     # draw x and y axes
-    ax1.axhline(color ='k')
-    ax1.axvline(color ='k')
+    ax1.axhline(color='k')
+    ax1.axvline(color='k')
     print('len(az.real)=', len(za.real))
     print('len(t)=', len(t))
 
     tscale = 1000.0   # change time units to msec
     tunits = 'msec'
-    fscale = 1/tscale
+    fscale = 1./tscale # PK: Ensure float division
     funits = 'khz'
 
     # plot the points
@@ -147,8 +147,8 @@ for fname in sorted(files):
     Plot the Frequency Data:
     '''
     # draw x and y axes
-    ax2.axhline(color ='k')
-    ax2.axvline(color ='k')
+    ax2.axhline(color='k')
+    ax2.axvline(color='k')
 
     # plot the points
     ax2.plot(f*fscale, fza.real, '-b')  # plot the real part (blue)
