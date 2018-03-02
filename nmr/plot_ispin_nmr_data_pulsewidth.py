@@ -87,11 +87,11 @@ ax1.axvline(color ='k')
 print('len(az.real)=',len(za.real))
 print('len(t)=',len(t))
 
-tscale = 1e-6   # change time units to µsec
+tscale = 1e-6   # change time units to microsec
 tunits = '$\mu$s'
 pi2_pulse = 5.5
 pi_pulse  = 11.25
-pulse_uncertainty = 1*tscale / 2#microsec from spincore graph precision
+pulse_uncertainty = 1. / 2#microsec from spincore graph precision
 
 # plot the points
 ax1.plot(t,A,label='Signal')
