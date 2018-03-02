@@ -7,12 +7,9 @@ Amended Feb 2018 by Kaitlyn and Patrick
 '''
 
 import numpy as np
-import scipy as sp
 import sympy as sm
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
-import scipy.integrate as integrate
 
 
 # Allows LaTeX output in Jupyter and in matplotlib
@@ -23,18 +20,17 @@ This reads in complex data from a file and outputs a tuple (t,za,s), where t is 
 '''
 def read_data_file(fname):
     infile = open(fname,"r")
-    text = infile.read()      # read file into a string
     infile.close()
 
     bw = 100000.000# This gives the bandwidth
-    print 'bw = ',bw
-    print '1/bw = ',1/bw  # Note that the time interval between points is 1/bw
+    print('bw = ',bw)
+    print('1/bw = ',1/bw)  # Note that the time interval between points is 1/bw
 
     # Read the data from the the file starting on line 1
     s1 = mlab.csv2rec(fname, skiprows=0)
     npts = len(s1)/2  # number of complex data points
 
-    print 'npts = ',npts
+    print('npts = ',npts)
 
     t =  s1['pulse_width_us__plot_0']  #time data
 
@@ -59,9 +55,9 @@ Begin Execution Here
 
 # The following is the filename containing the data
 directory = "data/pulseWidth/"
-filename = "pulsewidthfind2.csv"
+filename = "pulsewidthfind.csv"
 fname = directory+filename
-print "filename = ",fname
+print("filename = ",fname)
 plot_title='Pulse Width'
 
 # read data from file
@@ -88,20 +84,20 @@ Plot the Time Data:
 # draw x and y axes
 ax1.axhline(color ='k')
 ax1.axvline(color ='k')
-print 'len(az.real)=',len(za.real)
-print 'len(t)=',len(t)
+print('len(az.real)=',len(za.real))
+print('len(t)=',len(t))
 
-tscale = 1e3   # change time units to msec
-tunits = 'msec'
-pi2_pulse = 5.5*tscale
-pi_pulse  = 11.25*tscale
+tscale = 1e-6   # change time units to µsec
+tunits = '$\mu$s'
+pi2_pulse = 5.5
+pi_pulse  = 11.25
 pulse_uncertainty = 1*tscale / 2#microsec from spincore graph precision
 
 # plot the points
-ax1.plot(t*tscale,A,label='Signal')
-ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} $\pm$ {} ms'.format(pi2_pulse, pulse_uncertainty))
+ax1.plot(t,A,label='Signal')
+ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} $\pm$ {} $\mu s$'.format(pi2_pulse, pulse_uncertainty))
 if len(t) > 29:
-    ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} $\pm$ {} ms'.format(pi_pulse, pulse_uncertainty))
+    ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} $\pm$ {} $\mu s$'.format(pi_pulse, pulse_uncertainty))
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
@@ -109,7 +105,7 @@ ax1.set_ylabel('Signal (x $10^'+str(int(pow))+ '$)',fontsize=14)
 ax1.legend(loc='lower right')
 
 # specify the plot limits
-ax1.set_xlim(t[0]*tscale,t[-1]*tscale)
+ax1.set_xlim(t[0],t[-1])
 
 
 '''
