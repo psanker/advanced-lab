@@ -55,7 +55,7 @@ Begin Execution Here
 
 # The following is the filename containing the data
 directory = "data/pulseWidth/"
-filename = "pulsewidthfind.csv"
+filename = "pulsewidthfind2.csv"
 fname = directory+filename
 print("filename = ",fname)
 plot_title='Pulse Width'
@@ -98,6 +98,8 @@ ax1.plot(t,A,label='Signal')
 ax1.axvline(pi2_pulse, ls='--',color='g',alpha=.5,label='$\\pi/2$ pulse = {} $\pm$ {} $\mu s$'.format(pi2_pulse, pulse_uncertainty))
 if len(t) > 29:
     ax1.axvline(pi_pulse, ls='--',color='r',alpha=.5,label='$\\pi$ pulse = {} $\pm$ {} $\mu s$'.format(pi_pulse, pulse_uncertainty))
+else:
+    ax1.set_ylim(0)
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
