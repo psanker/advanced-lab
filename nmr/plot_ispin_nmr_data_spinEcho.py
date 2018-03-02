@@ -93,13 +93,13 @@ ax1.axvline(color ='k')
 print 'len(az.real)=',len(za.real)
 print 'len(t)=',len(t)
 
-tscale = 1e3   # change time units to msec
-tunits = 'msec'
+tscale = 1   # change time unitsc
+tunits = '$\mu$s'
 tauTime = tscale*tau#t[A.argmax()]
 
 # plot the points
 ax1.plot(t*tscale,A,label='Signal')
-ax1.axvline(tauTime, ls='--',color='g',alpha=.5,label='$\\tau$ = {:.3e} ms'.format(tauTime))
+ax1.axvline(tauTime, ls='--',color='g',alpha=.5,label='$\\tau$ = {} {}'.format(tauTime,tunits))
 
 # label the axes and display legend
 ax1.set_xlabel('Time ('+np.str(tunits)+')',fontsize=14)
