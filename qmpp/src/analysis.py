@@ -15,7 +15,7 @@ import sys
 # Little loading indicator
 def pw_char(i):
     if i % 4 == 0:
-        return "(—)"
+        return "(-)"
     elif i % 4 == 1:
         return "(/)"
     elif i % 4 == 2:
@@ -113,4 +113,4 @@ FILENAME = "secondrun"
 g2o2 = g2o(FILENAME)
 arr = np.array([g2o1, g2o2])
 
-print("g2(0): {0:1.4e} ± {1:1.4e}".format(np.mean(arr), np.std(arr)))
+print("g2(0): {0:1.4e} \pm {1:1.4e}".format(np.mean(arr), np.std(arr)))
