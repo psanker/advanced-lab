@@ -49,7 +49,7 @@ def parse_files(files, filename):
     countABC = []
 
     NAMES = ("Count", "Time", "A", "B", "AB", "C (Noise)", "AC", "BC", "ABC")
-    TYPES = (np.int, "|S10", np.int, np.int, np.int, np.int, np.int, np.int, np.int)
+    TYPES = (np.int, "|S10", np.float, np.float, np.float, np.float, np.float, np.float, np.float)
 
     for f in files:
         # Top of stack
