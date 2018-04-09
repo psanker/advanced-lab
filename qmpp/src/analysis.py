@@ -89,14 +89,14 @@ def runtime(times):
 
     return (end - start).total_seconds()
 
-def g2o(fn):
+def g2o(fn, counttime=(1. / 6.554e6)):
     times, data = load_data(fn)
 
     # N_AB / (N_A * N_B)
     count_frac = np.sum(data[:, 2]) / (np.sum(data[:, 0]) * np.sum(data[:, 0]))
 
     # Total time / read time
-    time_frac = runtime(times) / 10.24 # From settings
+    time_frac = runtime(times) / counttime # From settings
 
     return count_frac * time_frac
 
