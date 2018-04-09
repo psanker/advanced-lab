@@ -1,7 +1,7 @@
 Clock rate (Hz): 100
 Sample integration time (s): 0.080000
 
-Entry number,Time,A Detector,B Detector,A and B Detectors,Background,A and Background,B and Background,A, B and Background,Ch 8
+Index,Time,A,B,AB,C (Noise),AC,BC,ABC ,Ch 8
 1,3:02:40 PM,78,68,0,87,0,0,0,0
 2,3:02:40 PM,72,89,0,77,0,0,0,0
 3,3:02:40 PM,82,82,0,83,0,0,0,0

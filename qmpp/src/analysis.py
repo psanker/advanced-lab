@@ -1,17 +1,21 @@
+#!/usr/bin/env pythonw
+
 # -*- coding: utf-8 -*-
 
+#### 1. IMPORTS
 import numpy as np
 
 import os
 import glob
-
+from datetime import datetime
 
 import sys
 
+#### 2. FUNCTIONS
 # Little loading indicator
 def pw_char(i):
     if i % 4 == 0:
-        return "(-)"
+        return "(—)"
     elif i % 4 == 1:
         return "(/)"
     elif i % 4 == 2:
@@ -19,29 +23,20 @@ def pw_char(i):
     else:
         return "(\\)"
 
+# In all honesty, using Pandas would be good for handling this. However..
 def load_data(filename):
-    # dirpath = os.path.normpath(os.path.join(os.getcwd(), "../data"))
-    # oldpath = os.getcwd()
-
-    # Set CWD and search files
-    # os.chdir(dirpath)
-
     files = sorted(glob.glob("../data/{}*".format(filename)))
 
     for i in range(len(files)):
         files[i] = os.path.normpath(os.path.join(os.getcwd(), files[i]))
 
-    count, times, A, B, AB, C, AC, BC, ABC = parse_files(files, filename)
-
-    # Reset CWD to preserve state
-    # os.chdir(oldpath)
+    times, data = parse_files(files, filename)
 
     sys.stdout.write("Loading data... Done.\n")
-    return count, times, A, B, AB, C, AC, BC, ABC
+    return times, data
 
 def parse_files(files, filename):
     FILE_START = True
-    PROGRESS  = 0
 
     count    = []
     times    = []
@@ -58,57 +53,64 @@ def parse_files(files, filename):
 
     for f in files:
         # Top of stack
+        data = None
+
         if FILE_START:
             data = np.loadtxt(f, skiprows=4, delimiter=",", dtype={"names": NAMES, "formats": TYPES})
-            
-            for i in range(len(data)):
-                # Update loading tick
-                sys.stdout.write("Loading data... {}\r".format(pw_char(PROGRESS)))
-                PROGRESS += 1
-
-                count.append(data[i][0])
-                times.append(data[i][1])
-                countA.append(data[i][2])
-                countB.append(data[i][3])
-                countAB.append(data[i][4])
-                countC.append(data[i][5])
-                countAC.append(data[i][6])
-                countBC.append(data[i][7])
-                countABC.append(data[i][8])
-
             FILE_START = False
         else:
             data = np.loadtxt(f, delimiter=",", dtype={"names": NAMES, "formats": TYPES})
-            
-            for i in range(len(data)):
-                # Update loading tick
-                sys.stdout.write("Loading data... {}\r".format(pw_char(PROGRESS)))
-                PROGRESS += 1
 
-                count.append(data[i][0])
-                times.append(data[i][1])
-                countA.append(data[i][2])
-                countB.append(data[i][3])
-                countAB.append(data[i][4])
-                countC.append(data[i][5])
-                countAC.append(data[i][6])
-                countBC.append(data[i][7])
-                countABC.append(data[i][8])
+        if data is None:
+            raise Exception("Data not loaded properly")
 
-    return np.array(count), np.array(times), np.array(countA), np.array(countB), np.array(countAB), np.array(countC), np.array(countAC), np.array(countBC), np.array(countABC)
+        for i in range(len(data)):
+            # Update loading tick
+            sys.stdout.write("Loading data... {}\r".format(pw_char(i)))
 
-# EXECUTABLE SECTION
+            count.append(data[i][0])
+            times.append(data[i][1])
+            countA.append(data[i][2])
+            countB.append(data[i][3])
+            countAB.append(data[i][4])
+            countC.append(data[i][5])
+            countAC.append(data[i][6])
+            countBC.append(data[i][7])
+            countABC.append(data[i][8])
+
+    return np.array(times), np.transpose(np.array([countA, countB, countAB, countC, countAC, countBC, countABC]))
+
+def runtime(times):
+    start = times[0].decode("utf-8")
+    end   = times[-1].decode("utf-8")
+
+    start = datetime.strptime(start, "%I:%M:%S %p")
+    end   = datetime.strptime(end, "%I:%M:%S %p")
+
+    return (end - start).total_seconds()
+
+def g2o(fn):
+    times, data = load_data(fn)
+
+    # N_AB / (N_A * N_B)
+    count_frac = np.sum(data[:, 2]) / (np.sum(data[:, 0]) * np.sum(data[:, 0]))
+
+    # Total time / read time
+    time_frac = runtime(times) / 10.24 # From settings
+
+    return count_frac * time_frac
+
+#### 3. EXECUTION
 
 print("First run -----")
 FILENAME = "firstrun"
 
-count, times, A, B, AB, C, AC, BC, ABC = load_data(FILENAME)
-
-print(np.sum(A), np.sum(B), np.sum(AB))
+g2o1 = g2o(FILENAME)
 
 print("Second run -----")
 FILENAME = "secondrun"
 
-count, times, A, B, AB, C, AC, BC, ABC = load_data(FILENAME)
+g2o2 = g2o(FILENAME)
+arr = np.array([g2o1, g2o2])
 
-print(np.sum(A), np.sum(B), np.sum(AB))
+print("g2(0): {0:1.4e} ± {1:1.4e}".format(np.mean(arr), np.std(arr)))
