@@ -23,7 +23,7 @@ def pw_char(i):
     else:
         return "(\\)"
 
-# In all honesty, using Pandas would be good for handling this. However..
+# In all honesty, using Pandas would be better for handling this. However..
 def load_data(filename):
     files = sorted(glob.glob("../data/{}*".format(filename)))
 
