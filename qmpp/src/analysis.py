@@ -93,7 +93,7 @@ def g2o(fn, counttime=(1. / 6.554e6)):
     times, data = load_data(fn)
 
     # N_AB / (N_A * N_B)
-    count_frac = np.sum(data[:, 2]) / (np.sum(data[:, 0]) * np.sum(data[:, 0]))
+    count_frac = np.sum(data[:, 2]) / (np.sum(data[:, 0]) * np.sum(data[:, 1]))
 
     # Total time / read time
     time_frac = runtime(times) / counttime # From settings
