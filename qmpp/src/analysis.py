@@ -8,6 +8,7 @@ import numpy as np
 import os
 import glob
 from datetime import datetime
+from astropy.table import Table, Column
 
 import sys
 
@@ -100,17 +101,36 @@ def g2o(fn, counttime=(1. / 6.554e6)):
 
     return count_frac * time_frac
 
+def get_counts(fn):
+    times, data = load_data(fn)
+    return runtime(times), np.array([np.sum(data[:,0]),np.sum(data[:,1]),np.sum(data[:,2]),np.sum(data[:,3]),np.sum(data[:,4]),np.sum(data[:,5]),np.sum(data[:,6])])
+
 #### 3. EXECUTION
 
 print("First run -----")
 FILENAME = "firstrun"
 
 g2o1 = g2o(FILENAME)
+time1,counts1 = get_counts(FILENAME)
 
 print("Second run -----")
 FILENAME = "secondrun"
 
 g2o2 = g2o(FILENAME)
+time2,counts2 = get_counts(FILENAME)
+
 arr = np.array([g2o1, g2o2])
+counts = np.array([counts1, counts2]).T
+times = np.array([time1, time2]).T
 
 print("g2(0): {0:1.4e} \pm {1:1.4e}".format(np.mean(arr), np.std(arr)))
+print(Table({
+      'Counts A': counts[0],
+      'Counts B': counts[1],
+      'Counts AB': counts[2],
+      'Counts C': counts[3],
+      'Counts AC': counts[4],
+      'Counts BC': counts[5],
+      'Counts ABC': counts[6],
+      'Runtime': times[:]
+      }))
