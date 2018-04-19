@@ -90,47 +90,48 @@ def runtime(times):
 
     return (end - start).total_seconds()
 
-def g2o(fn, counttime=(1. / 6.554e6)):
-    times, data = load_data(fn)
-
+def g2o(times, data, counttime=(1. / 6.554e6)):
     # N_AB / (N_A * N_B)
-    count_frac = np.sum(data[:, 2]) / (np.sum(data[:, 0]) * np.sum(data[:, 1]))
+    count_frac = (np.sum(data[:, 2]) - np.sum(data[:, 6])) / (np.sum(data[:, 0]) * np.sum(data[:, 1]))
 
     # Total time / read time
     time_frac = runtime(times) / counttime # From settings
 
     return count_frac * time_frac
 
-def get_counts(fn):
-    times, data = load_data(fn)
-    return runtime(times), np.array([np.sum(data[:,0]),np.sum(data[:,1]),np.sum(data[:,2]),np.sum(data[:,3]),np.sum(data[:,4]),np.sum(data[:,5]),np.sum(data[:,6])])
+def get_counts(times, data):
+    return np.array([np.sum(data[:, 0]), np.sum(data[:, 1]), np.sum(data[:, 2]), np.sum(data[:, 3]), np.sum(data[:, 4]), np.sum(data[:, 5]), np.sum(data[:, 6])])
 
 #### 3. EXECUTION
 
 print("First run -----")
 FILENAME = "firstrun"
 
-g2o1 = g2o(FILENAME)
-time1,counts1 = get_counts(FILENAME)
+t1, d1 = load_data(FILENAME)
+
+g2o1 = g2o(t1, d1)
+counts1 = get_counts(t1, d1)
 
 print("Second run -----")
 FILENAME = "secondrun"
 
-g2o2 = g2o(FILENAME)
-time2,counts2 = get_counts(FILENAME)
+t2, d2 = load_data(FILENAME)
+
+g2o2 = g2o(t2, d2)
+counts2 = get_counts(t2, d2)
 
 arr = np.array([g2o1, g2o2])
 counts = np.array([counts1, counts2]).T
-times = np.array([time1, time2]).T
+times = np.array([runtime(t1), runtime(t2)]).T
 
-print("g2(0): {0:1.4e} \pm {1:1.4e}".format(np.mean(arr), np.std(arr)))
+print("\ng2(0): {0:1.4e} \pm {1:1.4e}\n".format(np.mean(arr), np.std(arr)))
 print(Table({
-      'Counts A': counts[0],
-      'Counts B': counts[1],
-      'Counts AB': counts[2],
-      'Counts C': counts[3],
-      'Counts AC': counts[4],
-      'Counts BC': counts[5],
-      'Counts ABC': counts[6],
-      'Runtime': times[:]
-      }))
+    'Counts A': counts[0],
+    'Counts B': counts[1],
+    'Counts AB': counts[2],
+    'Counts C': counts[3],
+    'Counts AC': counts[4],
+    'Counts BC': counts[5],
+    'Counts ABC': counts[6],
+    'Runtime': times[:]
+}))

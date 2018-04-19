@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# DAT files which are ridiculously big
+*.dat
+*.FDdat
+*.LSdat
+*.TDdat
