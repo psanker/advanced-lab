@@ -2,10 +2,13 @@
 
 # -*- coding: utf-8 -*-
 
-import numpy as np
+import os
 import re
 import sys
 
+import numpy as np
+
+# I/O functions ... boring
 def pw_char(x):
     r = x % 12
 
@@ -18,23 +21,29 @@ def pw_char(x):
     else:
         return '/'
 
-def load_status(i):
-    sys.stdout.write("Loading... ({})\r".format(pw_char(i)))
+def load_status(i, maximum):
+    sys.stdout.write("Loading ({1}%)... ({0})\r".format(pw_char(i), int(np.floor(100 * i / maximum))))
 
-def read_datfile(filepath, skiprows=0, dtype=np.float):
+def read_datfile(filepath, skiprows=0, dtype=np.float, skipcache=False):
     data        = None # Return value to be determined once number of columns is determined
 
-    # Gross overhead, but has to be done
+    # Determine if a file has been loaded before and therefore has been formatted properly
+    if has_cache(filepath) and not skipcache:
+        print("Loading \"{}\" from cache...".format(filepath))
+        data = load_cache(filepath)
+        return data, True # Immediately return
+
+    # Gross overhead, but has to be done in order to get the memory allocation right
     linecount   = sum(1 for line in open(filepath))
 
     with open(filepath) as f:
         print("Reading \"{}\"".format(filepath))
 
-        linecount  -= skiprows
-        currentline = 1                 # 1-based indexing
+        linecount  -= skiprows  # The actual maximum number of entries
+        currentline = 1         # 1-based indexing
 
         for line in f:
-            load_status(currentline)
+            load_status(currentline, linecount)
 
             if currentline < skiprows + 1:
                 currentline += 1
@@ -47,23 +56,70 @@ def read_datfile(filepath, skiprows=0, dtype=np.float):
                     # First line in processing
                     data = np.empty((linecount, len(line_data)), dtype=dtype)
 
-                    # Insert line to first entry
-                    data[0, :] = line_data
-                else:
-                    data[i, :] = line_data
-
+                data[i, :] = line_data
                 currentline += 1
-    return data
+    return data, False
+
+def has_cache(filepath):
+    return os.path.exists(filepath + ".cache") and os.path.isfile(filepath + ".cache")
+
+def load_cache(filepath):
+    return np.loadtxt(open(filepath + ".cache"), delimiter=",")
+
+def write_cache(filepath, data):
+    np.savetxt(filepath + ".cache", data, delimiter=",")
 
 def parse_line(line, dtype=np.float):
     vals = re.split("\s|\,\s", line)
 
-    # Clean up whitespace
-    vals = np.array(list(filter(lambda s: s != "", vals)))
+    # Clean up whitespace and return as np array with correct datatype
+    return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
-    return vals.astype(dtype)
+# Physics functions... interesting :D
+def get_alpha_kb_ratio(data, temp, column=0):
+    #    a*<x^2> = kbT
+    # -> a / kb  = T / <x^2>
+
+    # Subtract the mean value first (since <x^2> is assumed from x_0 = 0)
+    print(np.mean(data[:, column]))
+    x = data[:, column] - np.mean(data[:, column])
+    return temp / np.mean(x * x)
 
 ##### EXECUTION #####
-data = read_datfile("../data/data1.dat", skiprows=2)
-print(data)
+fn1 = "../data/data1.dat"
+T   = 293.15              # Assumed to be room temperature
+
+dat1, fromcache1 = read_datfile(fn1, skiprows=2)
+
+akbx1 = get_alpha_kb_ratio(dat1, T)
+akby1 = get_alpha_kb_ratio(dat1, T, column=1)
+
+print("(\\alpha / k_B)_x = {0:1.4f}\n(\\alpha / k_B)_y = {1:1.4f}".format(akbx1, akby1)) # Off
+
+fn2 = "../data/data2.dat"
+
+dat2, fromcache2 = read_datfile(fn2, skiprows=2)
+
+akbx2 = get_alpha_kb_ratio(dat2, T)
+akby2 = get_alpha_kb_ratio(dat2, T, column=1)
+
+print("(\\alpha / k_B)_x = {0:1.4f}\n(\\alpha / k_B)_y = {1:1.4f}".format(akbx2, akby2)) # WAY off
+
+fn3 = "../data/data3.dat"
+
+dat3, fromcache3 = read_datfile(fn3, skiprows=2)
+
+akbx3 = get_alpha_kb_ratio(dat3, T)
+akby3 = get_alpha_kb_ratio(dat3, T, column=1)
+
+print("(\\alpha / k_B)_x = {0:1.4f}\n(\\alpha / k_B)_y = {1:1.4f}".format(akbx3, akby3)) # OK at least these two match in order of magnitude
+
+if not fromcache1:
+    write_cache(fn1, dat1)
+
+if not fromcache2:
+    write_cache(fn2, dat2)
+
+if not fromcache3:
+    write_cache(fn3, dat3)
 

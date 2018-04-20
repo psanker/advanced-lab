@@ -102,6 +102,7 @@ ENV/
 
 # DAT files which are ridiculously big
 *.dat
+*.cache
 *.FDdat
 *.LSdat
 *.TDdat
