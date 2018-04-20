@@ -10,13 +10,13 @@ import numpy as np
 
 # I/O functions ... boring
 def pw_char(x):
-    r = x % 12
+    r = x % 1600
 
-    if r == 0 or r == 1 or r == 2:
+    if r < 401:
         return '|'
-    elif r == 3 or r == 4 or r == 5:
+    elif r < 801:
         return '\\'
-    elif r == 6 or r == 7 or r == 8:
+    elif r < 1201:
         return '—'
     else:
         return '/'
@@ -81,9 +81,10 @@ def get_alpha_kb_ratio(data, temp, column=0):
     # -> a / kb  = T / <x^2>
 
     # Subtract the mean value first (since <x^2> is assumed from x_0 = 0)
-    print(np.mean(data[:, column]))
     x = data[:, column] - np.mean(data[:, column])
-    return temp / np.mean(x * x)
+    
+    # Return with the corrected variance
+    return temp / np.var(x)
 
 ##### EXECUTION #####
 fn1 = "../data/data1.dat"
