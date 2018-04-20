@@ -76,7 +76,7 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-def get_alpha_kb_ratio(data, temp, column=0):
+def get_alpha_kb_ratio(data, temp, column=0, units=1.):
     #    a*<x^2> = kbT
     # -> a / kb  = T / <x^2>
 
@@ -84,36 +84,43 @@ def get_alpha_kb_ratio(data, temp, column=0):
     x = data[:, column] - np.mean(data[:, column])
     
     # Return with the corrected variance
-    return temp / np.var(x)
+    return temp / np.var(units * x)
 
 ##### EXECUTION #####
-fn1 = "../data/data1.dat"
 T   = 293.15              # Assumed to be room temperature
+
+convertXdata1 = (1. / 573.26e-3) * 1e-6
+convertYdata1 = (1. / 550.22e-3) * 1e-6
+
+convertXdata3 = (1. / 683.89e-3) * 1e-6
+convertYdata3 = (1. / 559.76e-3) * 1e-6
+
+fn1 = "../data/data1.dat"
 
 dat1, fromcache1 = read_datfile(fn1, skiprows=2)
 
-akbx1 = get_alpha_kb_ratio(dat1, T)
-akby1 = get_alpha_kb_ratio(dat1, T, column=1)
+akbx1 = get_alpha_kb_ratio(dat1, T, units=convertXdata1)
+akby1 = get_alpha_kb_ratio(dat1, T, column=1, units=convertYdata1)
 
-print("(\\alpha / k_B)_x = {0:1.4f}\n(\\alpha / k_B)_y = {1:1.4f}".format(akbx1, akby1)) # Off
+print("(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx1, akby1)) # Off
 
 fn2 = "../data/data2.dat"
 
 dat2, fromcache2 = read_datfile(fn2, skiprows=2)
 
-akbx2 = get_alpha_kb_ratio(dat2, T)
-akby2 = get_alpha_kb_ratio(dat2, T, column=1)
+akbx2 = get_alpha_kb_ratio(dat2, T, units=convertXdata1)
+akby2 = get_alpha_kb_ratio(dat2, T, column=1, units=convertYdata1)
 
-print("(\\alpha / k_B)_x = {0:1.4f}\n(\\alpha / k_B)_y = {1:1.4f}".format(akbx2, akby2)) # WAY off
+print("(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx2, akby2)) # WAY off
 
 fn3 = "../data/data3.dat"
 
 dat3, fromcache3 = read_datfile(fn3, skiprows=2)
 
-akbx3 = get_alpha_kb_ratio(dat3, T)
-akby3 = get_alpha_kb_ratio(dat3, T, column=1)
+akbx3 = get_alpha_kb_ratio(dat3, T, units=convertXdata3)
+akby3 = get_alpha_kb_ratio(dat3, T, column=1, units=convertYdata3)
 
-print("(\\alpha / k_B)_x = {0:1.4f}\n(\\alpha / k_B)_y = {1:1.4f}".format(akbx3, akby3)) # OK at least these two match in order of magnitude
+print("(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx3, akby3)) # OK at least these two match in order of magnitude
 
 if not fromcache1:
     write_cache(fn1, dat1)
