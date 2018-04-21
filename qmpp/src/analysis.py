@@ -133,5 +133,5 @@ print(Table({
     'Counts AC': counts[4],
     'Counts BC': counts[5],
     'Counts ABC': counts[6],
-    'Runtime': times[:]
+    'Runtime': times[:] / 3600.0 #(seconds to hours)
 }))
