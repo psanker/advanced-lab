@@ -4,26 +4,15 @@
 
 import os
 import re
-import sys
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
+import pandas as pd
+
+from astropy import units as u
 
 # I/O functions ... boring
-def pw_char(x):
-    r = x % 1600
-
-    if r < 401:
-        return '|'
-    elif r < 801:
-        return '\\'
-    elif r < 1201:
-        return '—'
-    else:
-        return '/'
-
-def load_status(i, maximum):
-    sys.stdout.write("Loading ({1}%)... ({0})\r".format(pw_char(i), int(np.floor(100 * i / maximum))))
-
 def read_datfile(filepath, skiprows=0, dtype=np.float, skipcache=False):
     data        = None # Return value to be determined once number of columns is determined
 
@@ -43,8 +32,6 @@ def read_datfile(filepath, skiprows=0, dtype=np.float, skipcache=False):
         currentline = 1         # 1-based indexing
 
         for line in f:
-            load_status(currentline, linecount)
-
             if currentline < skiprows + 1:
                 currentline += 1
                 continue
@@ -63,8 +50,8 @@ def read_datfile(filepath, skiprows=0, dtype=np.float, skipcache=False):
 def has_cache(filepath):
     return os.path.exists(filepath + ".cache") and os.path.isfile(filepath + ".cache")
 
-def load_cache(filepath):
-    return np.loadtxt(open(filepath + ".cache"), delimiter=",")
+def load_cache(filepath, columns=3):
+    return pd.read_csv(filepath + ".cache", delimiter=",").values # SO much faster
 
 def write_cache(filepath, data):
     np.savetxt(filepath + ".cache", data, delimiter=",")
@@ -76,58 +63,72 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-def get_alpha_kb_ratio(data, temp, column=0, units=1.):
+def get_alpha_kb_ratio(data, temp, column=0, units=1., sumcolumn=2):
     #    a*<x^2> = kbT
     # -> a / kb  = T / <x^2>
 
     # Subtract the mean value first (since <x^2> is assumed from x_0 = 0)
     x = data[:, column] - np.mean(data[:, column])
+
+    # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
+    x *= data[:, sumcolumn] * u.V
     
     # Return with the corrected variance
     return temp / np.var(units * x)
 
+# Each individual future is an instance of this function
+def process_data(filename, opts={}):
+    outstring = ""
+
+    data, fromcache = read_datfile(filename, opts["skiprows"])
+
+    akbx = get_alpha_kb_ratio(data, opts["T"], units=opts["convertX"])
+    akby = get_alpha_kb_ratio(data, opts["T"], column=1, units=opts["convertY"])
+
+    outstring += "Dataset \"{}\"\n".format(opts["dataname"])
+    outstring += "(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}\n".format(akbx, akby)
+
+    if not fromcache:
+        write_cache(filename, data)
+
+    return outstring
+
 ##### EXECUTION #####
-T   = 293.15              # Assumed to be room temperature
+T   = 293.15 * u.K           # Assumed to be room temperature
 
-convertXdata1 = (1. / 573.26e-3) * 1e-6
-convertYdata1 = (1. / 550.22e-3) * 1e-6
+convertXdata1 = ((1. / 573.26e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertYdata1 = ((1. / 550.22e-3) * (u.micron / u.V)).to(u.m / u.V)
 
-convertXdata3 = (1. / 683.89e-3) * 1e-6
-convertYdata3 = (1. / 559.76e-3) * 1e-6
+convertXdata3 = ((1. / 683.89e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertYdata3 = ((1. / 559.76e-3) * (u.micron / u.V)).to(u.m / u.V)
 
-fn1 = "../data/data1.dat"
+pool = ThreadPoolExecutor(3)
 
-dat1, fromcache1 = read_datfile(fn1, skiprows=2)
+futures = []
 
-akbx1 = get_alpha_kb_ratio(dat1, T, units=convertXdata1)
-akby1 = get_alpha_kb_ratio(dat1, T, column=1, units=convertYdata1)
+futures.append(pool.submit(process_data, "../data/data1.dat", opts={
+    "dataname": "Data 1",
+    "skiprows": 2,
+    "convertX": convertXdata1,
+    "convertY": convertYdata1,
+    "T": T
+}))
 
-print("(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx1, akby1)) # Off
+futures.append(pool.submit(process_data, "../data/data2.dat", opts={
+    "dataname": "Data 2",
+    "skiprows": 2,
+    "convertX": convertXdata1,
+    "convertY": convertYdata1,
+    "T": T
+}))
 
-fn2 = "../data/data2.dat"
+futures.append(pool.submit(process_data, "../data/data3.dat", opts={
+    "dataname": "Data 3",
+    "skiprows": 2,
+    "convertX": convertXdata3,
+    "convertY": convertYdata3,
+    "T": T
+}))
 
-dat2, fromcache2 = read_datfile(fn2, skiprows=2)
-
-akbx2 = get_alpha_kb_ratio(dat2, T, units=convertXdata1)
-akby2 = get_alpha_kb_ratio(dat2, T, column=1, units=convertYdata1)
-
-print("(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx2, akby2)) # WAY off
-
-fn3 = "../data/data3.dat"
-
-dat3, fromcache3 = read_datfile(fn3, skiprows=2)
-
-akbx3 = get_alpha_kb_ratio(dat3, T, units=convertXdata3)
-akby3 = get_alpha_kb_ratio(dat3, T, column=1, units=convertYdata3)
-
-print("(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx3, akby3)) # OK at least these two match in order of magnitude
-
-if not fromcache1:
-    write_cache(fn1, dat1)
-
-if not fromcache2:
-    write_cache(fn2, dat2)
-
-if not fromcache3:
-    write_cache(fn3, dat3)
-
+for x in as_completed(futures):
+    print(x.result())
