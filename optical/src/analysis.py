@@ -72,7 +72,7 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sumcolumn=2):
 
     # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
     x *= data[:, sumcolumn] * u.V
-    
+
     # Return with the corrected variance
     return temp / np.var(units * x)
 
@@ -102,7 +102,13 @@ convertYdata1 = ((1. / 550.22e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertXdata3 = ((1. / 683.89e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertYdata3 = ((1. / 559.76e-3) * (u.micron / u.V)).to(u.m / u.V)
 
-pool = ThreadPoolExecutor(3)
+convertXdata4 = ((1. / 745.20e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertYdata4 = ((1. / 703.16e-3) * (u.micron / u.V)).to(u.m / u.V)
+
+convertXdata5 = ((1. / 1.09) * (u.micron / u.V)).to(u.m / u.V)
+convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
+
+pool = ThreadPoolExecutor(5)
 
 futures = []
 
@@ -127,6 +133,22 @@ futures.append(pool.submit(process_data, "../data/data3.dat", opts={
     "skiprows": 2,
     "convertX": convertXdata3,
     "convertY": convertYdata3,
+    "T": T
+}))
+
+futures.append(pool.submit(process_data, "../data/data4.dat", opts={
+    "dataname": "Data 4",
+    "skiprows": 2,
+    "convertX": convertXdata4,
+    "convertY": convertYdata4,
+    "T": T
+}))
+
+futures.append(pool.submit(process_data, "../data/data5.dat", opts={
+    "dataname": "Data 5",
+    "skiprows": 2,
+    "convertX": convertXdata5,
+    "convertY": convertYdata5,
     "T": T
 }))
 
