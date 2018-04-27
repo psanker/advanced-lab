@@ -1,5 +1,4 @@
 #!/usr/bin/env pythonw
-
 # -*- coding: utf-8 -*-
 
 import os
@@ -72,12 +71,11 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sumcolumn=2):
 
     # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
     x *= data[:, sumcolumn] * u.V
-    
+
     # Return with the corrected variance
     return temp / np.var(units * x)
 
-# Each individual future is an instance of this function
-def process_data(filename, opts={}):
+def process_position_data(filename, opts={}):
     outstring = ""
 
     data, fromcache = read_datfile(filename, opts["skiprows"])
@@ -94,7 +92,7 @@ def process_data(filename, opts={}):
     return outstring
 
 ##### EXECUTION #####
-T   = 293.15 * u.K           # Assumed to be room temperature
+T = 293.15 * u.K           # Assumed to be room temperature
 
 convertXdata1 = ((1. / 573.26e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertYdata1 = ((1. / 550.22e-3) * (u.micron / u.V)).to(u.m / u.V)
@@ -102,11 +100,14 @@ convertYdata1 = ((1. / 550.22e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertXdata3 = ((1. / 683.89e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertYdata3 = ((1. / 559.76e-3) * (u.micron / u.V)).to(u.m / u.V)
 
+convertXdata4 = ((1. / 745.20e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertYdata4 = ((1. / 703.16e-3) * (u.micron / u.V)).to(u.m / u.V)
+
 pool = ThreadPoolExecutor(3)
 
 futures = []
 
-futures.append(pool.submit(process_data, "../data/data1.dat", opts={
+futures.append(pool.submit(process_position_data, "../data/data1.dat", opts={
     "dataname": "Data 1",
     "skiprows": 2,
     "convertX": convertXdata1,
@@ -114,7 +115,7 @@ futures.append(pool.submit(process_data, "../data/data1.dat", opts={
     "T": T
 }))
 
-futures.append(pool.submit(process_data, "../data/data2.dat", opts={
+futures.append(pool.submit(process_position_data, "../data/data2.dat", opts={
     "dataname": "Data 2",
     "skiprows": 2,
     "convertX": convertXdata1,
@@ -122,11 +123,19 @@ futures.append(pool.submit(process_data, "../data/data2.dat", opts={
     "T": T
 }))
 
-futures.append(pool.submit(process_data, "../data/data3.dat", opts={
+futures.append(pool.submit(process_position_data, "../data/data3.dat", opts={
     "dataname": "Data 3",
     "skiprows": 2,
     "convertX": convertXdata3,
     "convertY": convertYdata3,
+    "T": T
+}))
+
+futures.append(pool.submit(process_position_data, "../data/data4.dat", opts={
+    "dataname": "Data 4",
+    "skiprows": 2,
+    "convertX": convertXdata4,
+    "convertY": convertYdata4,
     "T": T
 }))
 
