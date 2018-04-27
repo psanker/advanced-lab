@@ -103,7 +103,10 @@ convertYdata3 = ((1. / 559.76e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertXdata4 = ((1. / 745.20e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertYdata4 = ((1. / 703.16e-3) * (u.micron / u.V)).to(u.m / u.V)
 
-pool = ThreadPoolExecutor(3)
+convertXdata5 = ((1. / 1.09) * (u.micron / u.V)).to(u.m / u.V)
+convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
+
+pool = ThreadPoolExecutor(5)
 
 futures = []
 
@@ -131,11 +134,19 @@ futures.append(pool.submit(process_position_data, "../data/data3.dat", opts={
     "T": T
 }))
 
-futures.append(pool.submit(process_position_data, "../data/data4.dat", opts={
+futures.append(pool.submit(process_data, "../data/data4.dat", opts={
     "dataname": "Data 4",
     "skiprows": 2,
     "convertX": convertXdata4,
     "convertY": convertYdata4,
+    "T": T
+}))
+
+futures.append(pool.submit(process_data, "../data/data5.dat", opts={
+    "dataname": "Data 5",
+    "skiprows": 2,
+    "convertX": convertXdata5,
+    "convertY": convertYdata5,
     "T": T
 }))
 
