@@ -134,7 +134,7 @@ futures.append(pool.submit(process_position_data, "../data/data3.dat", opts={
     "T": T
 }))
 
-futures.append(pool.submit(process_data, "../data/data4.dat", opts={
+futures.append(pool.submit(process_position_data, "../data/data4.dat", opts={
     "dataname": "Data 4",
     "skiprows": 2,
     "convertX": convertXdata4,
@@ -142,7 +142,7 @@ futures.append(pool.submit(process_data, "../data/data4.dat", opts={
     "T": T
 }))
 
-futures.append(pool.submit(process_data, "../data/data5.dat", opts={
+futures.append(pool.submit(process_position_data, "../data/data5.dat", opts={
     "dataname": "Data 5",
     "skiprows": 2,
     "convertX": convertXdata5,
