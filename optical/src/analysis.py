@@ -96,7 +96,7 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
     # Reject first row to remove average
-    pspec = (data[1:1000, column] * data[1:1000, sumcolumn])**2
+    pspec = (data[1:, column] * data[1:, sumcolumn])
 
     #              kbT       <-- p0
     # P^2 = ----------------
@@ -104,17 +104,26 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
     def func(f, *p):
         return p[0] / (p[1]*f**2 + p[2])
 
-    p    = [1., 1., 1.] # Bad initial guess... Maybe should provide better guess
+    p    = np.array([0.3, 0.3, 0.3]) # Bad initial guess... Maybe should provide better guess
 
-    return curve_fit(func, data[1:1000, 0], pspec, p0=p) # returns (params, cov matrix)
+    return curve_fit(func, data[1:, 0], pspec, p0=p) # returns (params, cov matrix)
 
-def plot_power_spectrum(data):
+def plot_power_spectrum(data, pX, pY):
     fig, ax = plt.subplots(2)
-    ax[0].plot(data[1:, 0], data[1:, 1])
+    ax[0].plot(data[1:, 0], data[1:, 1]*data[1:, 3])
+
+    def func(f, p):
+        return p[0] / (p[1]*f**2 + p[2])
+
+    freq = np.linspace(0, np.amax(data[:, 0]), 80000)
+    ax[0].plot(freq, func(freq, pX))
+
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
     
     ax[1].plot(data[1:, 0], data[1:, 2])
+    ax[1].plot(freq, func(freq, pY))
+
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
 
@@ -140,7 +149,7 @@ def process_frequency_data(filename, opts={}):
     # if not fromcache:
     #     write_cache(filename, data)
 
-    return outstring, data
+    return outstring, data, paramsX, paramsY
 
 def process_position_data(filename, opts={}):
     outstring = ""
@@ -176,6 +185,8 @@ convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
 
 def main():
     dataset = []
+    pX      = []
+    pY      = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -246,14 +257,20 @@ def main():
         }))
 
         for x in wait(futures)[0]:
+            res = x.result()
+
             # Check if future is from freq space
-            if type(x.result()) is tuple:
-                print(x.result()[0])
-                dataset.append(x.result()[1])
+            if type(res) is tuple:
+                print(res[0])
+                dataset.append(res[1])
+                pX.append(res[2])
+                pY.append(res[3])
             else:
-                print(x.result())
+                print(res)
     
-    plot_power_spectrum(dataset[0])
+    plot_power_spectrum(dataset[0], pX[0], pY[0])
+    plot_power_spectrum(dataset[1], pX[1], pY[1])
+    plot_power_spectrum(dataset[2], pX[2], pY[2])
     plt.show()
 
 if __name__ == "__main__":
