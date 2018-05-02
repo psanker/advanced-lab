@@ -73,8 +73,11 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sumcolumn=2):
     # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
     x *= data[:, sumcolumn] * u.V
 
+    # Corrected variance
+    mu = temp / (units * units * np.mean(x * x))
+
     # Return with the corrected variance
-    return temp / np.var(units * x)
+    return mu
 
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
@@ -109,8 +112,9 @@ def process_frequency_data(filename, opts={}):
     outstring += "p2_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[2], covX[2, 2]**0.5)
     outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}".format(paramsY[2], covY[2, 2]**0.5)
 
-    if not fromcache:
-        write_cache(filename, data)
+    # This is broken lul
+    # if not fromcache:
+    #     write_cache(filename, data)
 
     return outstring
 
@@ -204,6 +208,12 @@ with ProcessPoolExecutor(max_workers=5) as pool:
 
     futures.append(pool.submit(process_frequency_data, "../data/freq4.FDdat", opts={
         "dataname": "Data 4",
+        "skiprows": 4,
+        "T": T
+    }))
+
+    futures.append(pool.submit(process_frequency_data, "../data/freq5.FDdat", opts={
+        "dataname": "Data 5",
         "skiprows": 4,
         "T": T
     }))
