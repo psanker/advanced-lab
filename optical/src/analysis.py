@@ -96,7 +96,7 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
     # Reject first row to remove average
-    pspec = (data[1:1000, column] * data[1:1000, sumcolumn])**2
+    pspec = (data[55:5000, column] * data[55:5000, sumcolumn])
 
     #              kbT       <-- p0
     # P^2 = ----------------
@@ -106,14 +106,14 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
 
     p    = [1., 1., 1.] # Bad initial guess... Maybe should provide better guess
 
-    return curve_fit(func, data[1:1000, 0], pspec, p0=p) # returns (params, cov matrix)
+    return curve_fit(func, data[55:5000, 0], pspec, p0=p) # returns (params, cov matrix)
 
 def plot_power_spectrum(data):
     fig, ax = plt.subplots(2)
     ax[0].plot(data[1:, 0], data[1:, 1])
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
-    
+
     ax[1].plot(data[1:, 0], data[1:, 2])
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
@@ -252,7 +252,7 @@ def main():
                 dataset.append(x.result()[1])
             else:
                 print(x.result())
-    
+
     plot_power_spectrum(dataset[0])
     plt.show()
 
