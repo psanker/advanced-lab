@@ -63,7 +63,20 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-def get_alpha_kb_ratio(data, temp, column=0, units=1., sumcolumn=2):
+def propagate(f, arrx, arrsx, dx=1e-5):
+    assert len(arrx) == len(arrsx)
+
+    dfdx2 = np.zeros((len(arrx), len(arrx)))
+
+    for i in range(len(arrx)):
+        temp = arrx
+        temp[i] += dx*1j
+
+        dfdx2[i, i] = np.imag(f(temp) / dx)**2
+
+    return (arrsx.T) @ dfdx2 @ arrsx
+
+def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     #    a*<x^2> = kbT
     # -> a / kb  = T / <x^2>
 
@@ -150,73 +163,77 @@ convertYdata4 = ((1. / 703.16e-3) * (u.micron / u.V)).to(u.m / u.V)
 convertXdata5 = ((1. / 1.09) * (u.micron / u.V)).to(u.m / u.V)
 convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
 
-# By default, the pool executor only spins off 5 threads. This should be enough for us.
-with ProcessPoolExecutor(max_workers=5) as pool:
-    futures = []
+def main():
+    # By default, the pool executor only spins off 5 threads. This should be enough for us.
+    with ProcessPoolExecutor(max_workers=5) as pool:
+        futures = []
 
-    futures.append(pool.submit(process_position_data, "../data/data1.dat", opts={
-        "dataname": "Data 1",
-        "skiprows": 2,
-        "convertX": convertXdata1,
-        "convertY": convertYdata1,
-        "T": T
-    }))
+        futures.append(pool.submit(process_position_data, "../data/data1.dat", opts={
+            "dataname": "Data 1",
+            "skiprows": 2,
+            "convertX": convertXdata1,
+            "convertY": convertYdata1,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_position_data, "../data/data2.dat", opts={
-        "dataname": "Data 2",
-        "skiprows": 2,
-        "convertX": convertXdata1,
-        "convertY": convertYdata1,
-        "T": T
-    }))
+        futures.append(pool.submit(process_position_data, "../data/data2.dat", opts={
+            "dataname": "Data 2",
+            "skiprows": 2,
+            "convertX": convertXdata1,
+            "convertY": convertYdata1,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_position_data, "../data/data3.dat", opts={
-        "dataname": "Data 3",
-        "skiprows": 2,
-        "convertX": convertXdata3,
-        "convertY": convertYdata3,
-        "T": T
-    }))
+        futures.append(pool.submit(process_position_data, "../data/data3.dat", opts={
+            "dataname": "Data 3",
+            "skiprows": 2,
+            "convertX": convertXdata3,
+            "convertY": convertYdata3,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_position_data, "../data/data4.dat", opts={
-        "dataname": "Data 4",
-        "skiprows": 2,
-        "convertX": convertXdata4,
-        "convertY": convertYdata4,
-        "T": T
-    }))
+        futures.append(pool.submit(process_position_data, "../data/data4.dat", opts={
+            "dataname": "Data 4",
+            "skiprows": 2,
+            "convertX": convertXdata4,
+            "convertY": convertYdata4,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_position_data, "../data/data5.dat", opts={
-        "dataname": "Data 5",
-        "skiprows": 2,
-        "convertX": convertXdata5,
-        "convertY": convertYdata5,
-        "T": T
-    }))
+        futures.append(pool.submit(process_position_data, "../data/data5.dat", opts={
+            "dataname": "Data 5",
+            "skiprows": 2,
+            "convertX": convertXdata5,
+            "convertY": convertYdata5,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_frequency_data, "../data/freq1.FDdat", opts={
-        "dataname": "Data 1",
-        "skiprows": 4,
-        "T": T
-    }))
+        futures.append(pool.submit(process_frequency_data, "../data/freq1.FDdat", opts={
+            "dataname": "Data 1",
+            "skiprows": 4,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_frequency_data, "../data/freq3.FDdat", opts={
-        "dataname": "Data 3",
-        "skiprows": 4,
-        "T": T
-    }))
+        futures.append(pool.submit(process_frequency_data, "../data/freq3.FDdat", opts={
+            "dataname": "Data 3",
+            "skiprows": 4,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_frequency_data, "../data/freq4.FDdat", opts={
-        "dataname": "Data 4",
-        "skiprows": 4,
-        "T": T
-    }))
+        futures.append(pool.submit(process_frequency_data, "../data/freq4.FDdat", opts={
+            "dataname": "Data 4",
+            "skiprows": 4,
+            "T": T
+        }))
 
-    futures.append(pool.submit(process_frequency_data, "../data/freq5.FDdat", opts={
-        "dataname": "Data 5",
-        "skiprows": 4,
-        "T": T
-    }))
+        futures.append(pool.submit(process_frequency_data, "../data/freq5.FDdat", opts={
+            "dataname": "Data 5",
+            "skiprows": 4,
+            "T": T
+        }))
 
-    for x in wait(futures)[0]:
-        print(x.result())
+        for x in wait(futures)[0]:
+            print(x.result())
+
+if __name__ == "__main__":
+    main()
