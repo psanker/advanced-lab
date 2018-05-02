@@ -8,6 +8,7 @@ from concurrent.futures import ProcessPoolExecutor, wait
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from astropy import units as u
 from scipy.optimize import curve_fit
@@ -94,8 +95,8 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
 
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
-    # Reject first column to remove average
-    pspec = (data[1:, column] * data[1:, sumcolumn])**2
+    # Reject first row to remove average
+    pspec = (data[1:1000, column] * data[1:1000, sumcolumn])**2
 
     #              kbT       <-- p0
     # P^2 = ----------------
@@ -105,7 +106,17 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
 
     p    = [1., 1., 1.] # Bad initial guess... Maybe should provide better guess
 
-    return curve_fit(func, data[1:, 0], pspec, p0=p) # returns (params, cov matrix)
+    return curve_fit(func, data[1:1000, 0], pspec, p0=p) # returns (params, cov matrix)
+
+def plot_power_spectrum(data):
+    fig, ax = plt.subplots(2)
+    ax[0].plot(data[1:, 0], data[1:, 1])
+    ax[0].set_xscale("log")
+    ax[0].set_yscale("log")
+    
+    ax[1].plot(data[1:, 0], data[1:, 2])
+    ax[1].set_xscale("log")
+    ax[1].set_yscale("log")
 
 def process_frequency_data(filename, opts={}):
     outstring = ""
@@ -129,7 +140,7 @@ def process_frequency_data(filename, opts={}):
     # if not fromcache:
     #     write_cache(filename, data)
 
-    return outstring
+    return outstring, data
 
 def process_position_data(filename, opts={}):
     outstring = ""
@@ -164,6 +175,8 @@ convertXdata5 = ((1. / 1.09) * (u.micron / u.V)).to(u.m / u.V)
 convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
 
 def main():
+    dataset = []
+
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
         futures = []
@@ -233,7 +246,15 @@ def main():
         }))
 
         for x in wait(futures)[0]:
-            print(x.result())
+            # Check if future is from freq space
+            if type(x.result()) is tuple:
+                print(x.result()[0])
+                dataset.append(x.result()[1])
+            else:
+                print(x.result())
+    
+    plot_power_spectrum(dataset[0])
+    plt.show()
 
 if __name__ == "__main__":
     main()
