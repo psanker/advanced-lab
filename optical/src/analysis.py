@@ -64,18 +64,18 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-def propagate(f, arrx, arrsx, dx=1e-5):
-    assert len(arrx) == len(arrsx)
+# def propagate(f, arrx, arrsx, dx=1e-5):
+#     assert len(arrx) == len(arrsx)
 
-    dfdx2 = np.zeros((len(arrx), len(arrx)))
+#     dfdx2 = np.zeros((len(arrx), len(arrx)))
 
-    for i in range(len(arrx)):
-        temp = arrx
-        temp[i] += dx*1j
+#     for i in range(len(arrx)):
+#         temp = arrx
+#         temp[i] += dx*1j
 
-        dfdx2[i, i] = np.imag(f(temp) / dx)**2
+#         dfdx2[i, i] = np.imag(f(temp) / dx)**2
 
-    return (arrsx.T) @ dfdx2 @ arrsx
+#     return (arrsx.T) @ dfdx2 @ arrsx
 
 def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     #    a*<x^2> = kbT
@@ -120,7 +120,7 @@ def plot_power_spectrum(data, pX, pY):
 
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
-    
+
     ax[1].plot(data[1:, 0], data[1:, 2])
     ax[1].plot(freq, func(freq, pY))
 
