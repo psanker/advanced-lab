@@ -335,13 +335,6 @@ def main():
             if len(res[1]) == 6:
                 freqdata.append(res[1])
             else:
-<<<<<<< HEAD
-                print(res)
-
-    plot_power_spectrum(dataset[0], pX[0], pY[0])
-    plot_power_spectrum(dataset[1], pX[1], pY[1])
-    plot_power_spectrum(dataset[2], pX[2], pY[2])
-=======
                 posdata.append(res[1])
 
     for ftup in freqdata:
@@ -357,7 +350,6 @@ def main():
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
     print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(np.mean(kb), np.std(kb)))
 
->>>>>>> d74a75c6777fd64048340285d1ed4ee5938495a4
     plt.show()
 
 if __name__ == "__main__":
