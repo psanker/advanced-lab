@@ -64,18 +64,18 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-# def propagate(f, arrx, arrsx, dx=1e-5):
-#     assert len(arrx) == len(arrsx)
+def propagate(f, arrx, arrsx, dx=1e-5):
+    assert len(arrx) == len(arrsx)
 
-#     dfdx2 = np.zeros((len(arrx), len(arrx)))
+    dfdx2 = np.zeros((len(arrx), len(arrx)))
 
-#     for i in range(len(arrx)):
-#         temp = arrx
-#         temp[i] += dx*1j
+    for i in range(len(arrx)):
+        temp = arrx + 0j
+        temp[i] += dx*1j
 
-#         dfdx2[i, i] = np.imag(f(temp) / dx)**2
+        dfdx2[i, i] = np.imag(f(temp) / dx)**2
 
-#     return (arrsx.T) @ dfdx2 @ arrsx
+    return (arrsx.T) @ dfdx2 @ arrsx
 
 def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     #    a*<x^2> = kbT
@@ -85,47 +85,93 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     x = data[:, column] - np.mean(data[:, column])
 
     # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
-    x *= data[:, sumcolumn] * u.V
+    x *= data[:, sumcolumn]
 
     # Corrected variance
-    mu = temp / (units * units * np.mean(x * x))
+    mu  = temp / (np.mean(x * x)*(u.V)**2 / (units**2))
+    smu = np.sqrt(propagate(lambda a: temp.value / (a[0]**(-2) * np.mean(x * x)), np.array([units.value]), np.array([sunits.value])))
 
     # Return with the corrected variance
-    return mu
+    return mu, smu * mu.unit
 
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
     # Reject first row to remove average
-    pspec = (data[1:, column] * data[1:, sumcolumn])
+    pspec = (data[1:, column])
 
     #              kbT       <-- p0
     # P^2 = ----------------
     #         p1*f^2 + p2
     def func(f, *p):
-        return p[0] / (p[1]*f**2 + p[2])
+        return p[0] / (p[1]*f**2 + p[1]*p[2]**2)
 
     p    = np.array([1e-6, 0.3, 1]) # Bad initial guess... Maybe should provide better guess
 
-    return curve_fit(func, data[1:, 0], pspec, p0=p) # returns (params, cov matrix)
+    return curve_fit(func, data[1:, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
 
-def plot_power_spectrum(data, pX, pY):
+def interpret_alpha(p2, dp2, a=3.01*u.micron):
+    # Extract the spring constant from the cornering frequency
+    TWO_PI    = 2.*np.pi
+    eta       = 8.90e-4 * (u.Pa * u.s)
+    twopibeta = 6. * TWO_PI * eta * a
+
+    P2  = p2 * (1 / u.s)
+    DP2 = dp2 * (1 / u.s)
+
+    alpha  = twopibeta * np.abs(P2)
+    salpha = np.sqrt(propagate(lambda a: twopibeta.value * a[0], np.array([P2.value]), np.array([DP2.value])))
+
+    return alpha.to("N / m"), (salpha * alpha.unit).to("N / m")
+
+def extract_kb(postup, freqtup):
+    akbx, sakbx = postup[1]
+    akby, sakby = postup[2]
+    alpha_x, salpha_x = freqtup[4]
+    alpha_y, salpha_y = freqtup[5]
+
+    kb_x = ((1 / akbx) * alpha_x)
+    kb_y = ((1 / akby) * alpha_y)
+
+    skb_x = np.sqrt(propagate(lambda a: (1 / a[0])*a[1], np.array([akbx.value, alpha_x.value]), np.array([sakbx.value, salpha_x.value])))
+    skb_y = np.sqrt(propagate(lambda a: (1 / a[0])*a[1], np.array([akby.value, alpha_y.value]), np.array([sakby.value, salpha_y.value])))
+
+    skb_x = (skb_x * kb_x.unit).to("J / K")
+    kb_x  = (kb_x).to("J / K")
+    skb_y = (skb_y * kb_y.unit).to("J / K")
+    kb_y  = (kb_y).to("J / K")
+
+    print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_x, skb_x))
+    print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_y, skb_y))
+
+    return kb_x, kb_y
+
+def plot_power_spectrum(datatuple):
+    dname = datatuple[0]
+    data  = datatuple[1]
+    pX    = datatuple[2]
+    pY    = datatuple[3]
+
     fig, ax = plt.subplots(2)
-    ax[0].plot(data[1:, 0], data[1:, 1]*data[1:, 3])
+    ax[0].plot(data[1:, 0], data[1:, 1])
 
     def func(f, p):
-        return p[0] / (p[1]*f**2 + p[2])
+        return p[0] / (p[1]*f**2 + p[1]*p[2]**2)
 
     freq = np.linspace(0, np.amax(data[:, 0]), 80000)
     ax[0].plot(freq, func(freq, pX))
 
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
+    ax[0].set_xlabel("{0} - Frequency ($Hz$)".format(dname))
+    ax[0].set_ylabel("Power Spectrum ($V^2 / Hz$)")
 
     ax[1].plot(data[1:, 0], data[1:, 2])
     ax[1].plot(freq, func(freq, pY))
 
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
+    ax[1].set_xlabel("{0} - Frequency ($Hz$)".format(dname))
+    ax[1].set_ylabel("Power Spectrum ($V^2 / Hz$)")
 
 def process_frequency_data(filename, opts={}):
     outstring = ""
@@ -138,55 +184,69 @@ def process_frequency_data(filename, opts={}):
     outstring += "\n--------------------\n"
     outstring += "Fourier dataset \"{}\"\n".format(opts["dataname"])
 
-    outstring += "p0_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[0], covX[0, 0]**0.5)
-    outstring += "p0_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[0], covY[0, 0]**0.5)
-    outstring += "p1_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[1], covX[1, 1]**0.5)
-    outstring += "p1_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[1], covY[1, 1]**0.5)
-    outstring += "p2_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[2], covX[2, 2]**0.5)
-    outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}".format(paramsY[2], covY[2, 2]**0.5)
+    outstring += "p0_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[0], np.abs(covX[0, 0])**0.5)
+    outstring += "p0_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[0], np.abs(covY[0, 0])**0.5)
+    outstring += "p1_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[1], np.abs(covX[1, 1])**0.5)
+    outstring += "p1_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[1], np.abs(covY[1, 1])**0.5)
+    outstring += "p2_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[2], np.abs(covX[2, 2])**0.5)
+    outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[2], np.abs(covY[2, 2])**0.5)
+
+    alpha_x, salpha_x = interpret_alpha(paramsX[2], np.abs(covX[2, 2])**0.5)
+    alpha_y, salpha_y = interpret_alpha(paramsY[2], np.abs(covY[2, 2])**0.5)
+
+    outstring += "\\alpha_x = {0:1.3e} \\pm {1:1.3e}\n".format(alpha_x, salpha_x)
+    outstring += "\\alpha_y = {0:1.3e} \\pm {1:1.3e}".format(alpha_y, salpha_y)
 
     # This is broken lul
     # if not fromcache:
     #     write_cache(filename, data)
 
-    return outstring, data, paramsX, paramsY
+    return outstring, (opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y))
 
 def process_position_data(filename, opts={}):
     outstring = ""
 
     data, fromcache = read_datfile(filename, opts["skiprows"])
 
-    akbx = get_alpha_kb_ratio(data, opts["T"], units=opts["convertX"])
-    akby = get_alpha_kb_ratio(data, opts["T"], column=1, units=opts["convertY"])
+    akbx, sakbx = get_alpha_kb_ratio(data, opts["T"], units=opts["convertX"], sunits=opts["uconvertX"])
+    akby, sakby = get_alpha_kb_ratio(data, opts["T"], column=1, units=opts["convertY"], sunits=opts["uconvertY"])
 
     outstring += "\n--------------------\n"
     outstring += "Position dataset \"{}\"\n".format(opts["dataname"])
-    outstring += "(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx, akby)
+    outstring += "(\\alpha / k_B)_x = {0:1.3e} \\pm {1:1.3e}\n(\\alpha / k_B)_y = {2:1.3e} \\pm {3:1.3e}".format(akbx, sakbx, akby, sakby)
 
     if not fromcache:
         write_cache(filename, data)
 
-    return outstring
+    return outstring, (opts["dataname"], (akbx, sakbx), (akby, sakby))
 
 ##### EXECUTION #####
 T = 293.15 * u.K           # Assumed to be room temperature
 
-convertXdata1 = ((1. / 573.26e-3) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata1 = ((1. / 550.22e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata1 = ((573.26e-3) * (u.V / u.micron))
+convertYdata1 = ((550.22e-3) * (u.V / u.micron))
+uconvXdata1   = (.186e-3 * (u.V / u.micron))
+uconvYdata1   = (.223e-3 * (u.V / u.micron))
 
-convertXdata3 = ((1. / 683.89e-3) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata3 = ((1. / 559.76e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata3 = ((683.89e-3) * (u.V / u.micron))
+convertYdata3 = ((559.76e-3) * (u.V / u.micron))
+uconvXdata3   = (.166e-3 * (u.V / u.micron))
+uconvYdata3   = (.250e-3 * (u.V / u.micron))
 
-convertXdata4 = ((1. / 745.20e-3) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata4 = ((1. / 703.16e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata4 = ((745.20e-3) * (u.V / u.micron))
+convertYdata4 = ((703.16e-3) * (u.V / u.micron))
+uconvXdata4   = (.15e-3 * (u.V / u.micron))
+uconvYdata4   = (.68e-3 * (u.V / u.micron))
 
-convertXdata5 = ((1. / 1.09) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata5 = ((1.09) * (u.V / u.micron))
+convertYdata5 = ((1.00) * (u.V / u.micron))
+uconvXdata5   = (1.0e-3 * (u.V / u.micron))
+uconvYdata5   = (1.0e-3 * (u.V / u.micron))
 
 def main():
-    dataset = []
-    pX      = []
-    pY      = []
+    freqdata = []
+    posdata  = []
+    kb = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -197,6 +257,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata1,
             "convertY": convertYdata1,
+            "uconvertX": uconvXdata1,
+            "uconvertY": uconvYdata1,
             "T": T
         }))
 
@@ -205,6 +267,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata1,
             "convertY": convertYdata1,
+            "uconvertX": uconvXdata1,
+            "uconvertY": uconvYdata1,
             "T": T
         }))
 
@@ -213,6 +277,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata3,
             "convertY": convertYdata3,
+            "uconvertX": uconvXdata3,
+            "uconvertY": uconvYdata3,
             "T": T
         }))
 
@@ -221,6 +287,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata4,
             "convertY": convertYdata4,
+            "uconvertX": uconvXdata4,
+            "uconvertY": uconvYdata4,
             "T": T
         }))
 
@@ -229,6 +297,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata5,
             "convertY": convertYdata5,
+            "uconvertX": uconvXdata5,
+            "uconvertY": uconvYdata5,
             "T": T
         }))
 
@@ -259,18 +329,35 @@ def main():
         for x in wait(futures)[0]:
             res = x.result()
 
+            print(res[0])
+
             # Check if future is from freq space
-            if type(res) is tuple:
-                print(res[0])
-                dataset.append(res[1])
-                pX.append(res[2])
-                pY.append(res[3])
+            if len(res[1]) == 6:
+                freqdata.append(res[1])
             else:
+<<<<<<< HEAD
                 print(res)
 
     plot_power_spectrum(dataset[0], pX[0], pY[0])
     plot_power_spectrum(dataset[1], pX[1], pY[1])
     plot_power_spectrum(dataset[2], pX[2], pY[2])
+=======
+                posdata.append(res[1])
+
+    for ftup in freqdata:
+        plot_power_spectrum(ftup)
+
+        for ptup in posdata:
+            if ptup[0] == ftup[0]:
+                kbx, kby = extract_kb(ptup, ftup)
+                kb.append(kbx.value)
+                kb.append(kby.value)
+
+    kb = np.array(kb)
+    print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
+    print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(np.mean(kb), np.std(kb)))
+
+>>>>>>> d74a75c6777fd64048340285d1ed4ee5938495a4
     plt.show()
 
 if __name__ == "__main__":
