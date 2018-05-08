@@ -64,16 +64,17 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-def propagate(f, arrx, arrsx, dx=1e-5):
+def propagate(f, arrx, arrsx, dx=1e-8):
     assert len(arrx) == len(arrsx)
 
     dfdx2 = np.zeros((len(arrx), len(arrx)))
 
     for i in range(len(arrx)):
-        temp = arrx + 0j
-        temp[i] += dx*1j
+        # Complex step differentiation
+        temp = arrx + 0j # Promote array to complex values
+        temp[i] += dx*1j # Step the differentiating variable
 
-        dfdx2[i, i] = np.imag(f(temp) / dx)**2
+        dfdx2[i, i] = np.imag(f(temp) / dx)**2 # Evaluate
 
     return (arrsx.T) @ dfdx2 @ arrsx
 
@@ -84,8 +85,8 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     # Subtract the mean value first (since <x^2> is assumed from x_0 = 0)
     x = data[:, column] - np.mean(data[:, column])
 
-    # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
-    # x *= data[:, sumcolumn] <-- Apparently this throws things off?
+    # According to manual, X and Y MUST be normalized by SUM.
+    x /= data[:, sumcolumn]
 
     # Corrected variance
     mu  = temp / (np.mean(x * x)*(u.V)**2 / (units**2))
@@ -99,11 +100,11 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
     # Reject first row to remove average
     pspec = (data[1:, column])
 
-    #              kbT       <-- p0
+    #              kbT       <-- p0: Turns out to be not a good parameter to use
     # P^2 = ----------------
-    #       p1*(f^2 + p2^2)
+    #       p1*(f^2 + p2^2)  <-- p2: The corner frequency is desired
     def func(f, *p):
-        return p[0] / (p[1]*f**2 + p[1]*p[2]**2)
+        return p[0] / (p[1]*(f**2 + p[2]**2))
 
     p    = np.array([1e-6, 1e-6, 1.]) # Bad initial guess... Maybe should provide better guess
 
@@ -143,7 +144,7 @@ def extract_kb(postup, freqtup):
     print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_x, skb_x))
     print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_y, skb_y))
 
-    return kb_x, kb_y
+    return kb_x, kb_y, skb_x, skb_y
 
 def plot_power_spectrum(datatuple):
     dname = datatuple[0]
@@ -163,7 +164,7 @@ def plot_power_spectrum(datatuple):
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
     ax[0].set_xlabel("{0} - Frequency ($Hz$)".format(dname))
-    ax[0].set_ylabel("Power Spectrum ($V^2 / Hz$)")
+    ax[0].set_ylabel("Power Spectrum in X ($V^2 / Hz$)")
 
     ax[1].plot(data[1:, 0], data[1:, 2])
     ax[1].plot(freq, func(freq, pY))
@@ -171,7 +172,7 @@ def plot_power_spectrum(datatuple):
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
     ax[1].set_xlabel("{0} - Frequency ($Hz$)".format(dname))
-    ax[1].set_ylabel("Power Spectrum ($V^2 / Hz$)")
+    ax[1].set_ylabel("Power Spectrum in Y ($V^2 / Hz$)")
 
 def process_frequency_data(filename, opts={}):
     outstring = ""
@@ -246,7 +247,8 @@ uconvYdata5   = (1.0e-3 * (u.V / u.micron))
 def main():
     freqdata = []
     posdata  = []
-    kb = []
+    kb  = []
+    skb = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -329,6 +331,7 @@ def main():
         for x in wait(futures)[0]:
             res = x.result()
 
+            # Print out the output debugging statements from each result
             print(res[0])
 
             # Check if future is from freq space
@@ -342,13 +345,21 @@ def main():
 
         for ptup in posdata:
             if ptup[0] == ftup[0]:
-                kbx, kby = extract_kb(ptup, ftup)
+                kbx, kby, skbx, skby = extract_kb(ptup, ftup)
                 kb.append(kbx.value)
+                skb.append(skbx.value)
                 kb.append(kby.value)
+                skb.append(skby.value)
 
-    kb = np.array(kb)
+    kb  = np.array(kb)
+    skb = np.array(skb)
+
+    mu_kb = np.mean(kb)
+    # s_kb  = np.sqrt(propagate(lambda a: np.mean(a), kb, skb)) <-- This is too narrow an uncertainty I think
+    s_kb  = np.sum(skb)
+
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
-    print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(np.mean(kb), np.std(kb)))
+    print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(mu_kb, s_kb))
 
     plt.show()
 
