@@ -14,6 +14,32 @@ from astropy import units as u
 from scipy.optimize import curve_fit
 from scipy.stats import norm
 
+# Data structures
+class PositionData:
+    def __init__(self, name, akbx_tuple, akby_tuple):
+        self.dataname = name
+
+        if type(akbx_tuple) is not tuple or type(akby_tuple) is not tuple:
+            raise TypeError("Position data needs \\alpha/kB and its uncertainty in the form of a tuple")
+
+        self.alphakb_x = akbx_tuple
+        self.alphakb_y = akby_tuple
+
+# return outstring, (opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y), opts["current"])
+class FrequencyData:
+    def __init__(self, name, rawdata, paramsX, paramsY, alphax_tuple, alphay_tuple, current):
+        self.dataname = name
+        self.data     = rawdata
+        self.paramsX  = paramsX
+        self.paramsY  = paramsY
+
+        if type(alphax_tuple) is not tuple or type(alphay_tuple) is not tuple:
+            raise TypeError("Position data needs \\alpha/kB and its uncertainty in the form of a tuple")
+
+        self.alpha_x = alphax_tuple
+        self.alpha_y = alphay_tuple
+        self.current = current
+
 # I/O functions ... boring
 def read_datfile(filepath, skiprows=0, dtype=np.float64, skipcache=False):
     data        = None # Return value to be determined once number of columns is determined
@@ -125,11 +151,11 @@ def interpret_alpha(p2, dp2, a=3.*u.micron):
 
     return alpha.to("N / m"), (salpha * alpha.unit).to("N / m")
 
-def extract_kb_alpha(postup, freqtup):
-    akbx, sakbx = postup[1]
-    akby, sakby = postup[2]
-    alpha_x, salpha_x = freqtup[4]
-    alpha_y, salpha_y = freqtup[5]
+def extract_kb(posdat, freqdat):
+    akbx, sakbx = posdat.alphakb_x
+    akby, sakby = posdat.alphakb_y
+    alpha_x, salpha_x = freqdat.alpha_x
+    alpha_y, salpha_y = freqdat.alpha_y
 
     kb_x = ((1 / akbx) * alpha_x)
     kb_y = ((1 / akby) * alpha_y)
@@ -142,22 +168,25 @@ def extract_kb_alpha(postup, freqtup):
     skb_y = (skb_y * kb_y.unit).to("J / K")
     kb_y  = (kb_y).to("J / K")
 
-    print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_x, skb_x))
-    print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_y, skb_y))
+    print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(posdat.dataname, kb_x, skb_x))
+    print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(posdat.dataname, kb_y, skb_y))
 
-    return kb_x, kb_y, skb_x, skb_y, alpha_x, alpha_y, salpha_x, salpha_y
+    return kb_x, kb_y, skb_x, skb_y
 
-def plot_kb(exp,unc,theory=1.381e-23):
-    x = np.linspace(exp - 10*unc, exp + 10*unc, 100)
+def plot_kb(exp, unc, theory=1.381e-23):
+    x = np.linspace(0, exp + 5*unc, 100)
+    Z = norm.cdf(1e6, exp, unc) - norm.cdf(0, exp, unc) # Normalization factor considering a truncated Gaussian
+
     plt.figure()
-    plt.plot(x,norm.pdf(x, exp, unc), label=('$k_B$={0:1.3e} $\pm$ {1:1.3e} $J/K$'.format(exp, unc)))
+    plt.plot(x, norm.pdf(x, exp, unc) / Z, label=('$k_B$={0:1.3e} $\pm$ {1:1.3e} $J/K$'.format(exp, unc)))
     plt.axvline(theory, ls='--', color='k', label=('$k_B$={0:1.3e} $J/K$'.format(theory)))
     plt.xlabel('J/K')
     plt.title('Comparing Experimental Boltzmann to Theory')
-    plt.legend(loc='lower left')
+    plt.legend(loc='upper right')
 
 def plot_current_dependence(alphas, salphas, currents,conv=1e6):
     assert len(alphas[0]) == len(currents), 'Array dimensions do not match'
+
     plt.figure()
     plt.errorbar(currents,alphas[0]*conv,yerr=salphas[0]*conv,fmt='o',markersize=3,label='x')
     plt.errorbar(currents,alphas[1]*conv,yerr=salphas[1]*conv,fmt='o',markersize=3,label='y')
@@ -167,11 +196,11 @@ def plot_current_dependence(alphas, salphas, currents,conv=1e6):
     plt.ylabel('$\\alpha$ ($\\mu N/m$)')
     plt.legend()
 
-def plot_power_spectrum(datatuple):
-    dname = datatuple[0]
-    data  = datatuple[1]
-    pX    = datatuple[2]
-    pY    = datatuple[3]
+def plot_power_spectrum(freqdat):
+    dname = freqdat.dataname
+    data  = freqdat.data
+    pX    = freqdat.paramsX
+    pY    = freqdat.paramsY
 
     fig, ax = plt.subplots(2)
     ax[0].plot(data[1:, 0], data[1:, 1])
@@ -223,7 +252,7 @@ def process_frequency_data(filename, opts={}):
     # if not fromcache:
     #     write_cache(filename, data)
 
-    return outstring, (opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y),opts["current"])
+    return outstring, FrequencyData(opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y), opts["current"])
 
 def process_position_data(filename, opts={}):
     outstring = ""
@@ -240,7 +269,7 @@ def process_position_data(filename, opts={}):
     if not fromcache:
         write_cache(filename, data)
 
-    return outstring, (opts["dataname"], (akbx, sakbx), (akby, sakby))
+    return outstring, PositionData(opts["dataname"], (akbx, sakbx), (akby, sakby))
 
 ##### EXECUTION #####
 T = 293.15 * u.K           # Assumed to be room temperature
@@ -270,15 +299,7 @@ uconvYdata5   = (1.0e-3 * (u.V / u.micron))
 current5      = 275.0
 
 def main():
-    freqdata = []
-    posdata  = []
-    kb  = []
-    skb = []
-    alphax = []
-    alphay = []
-    salphax = []
-    salphay = []
-    currents = []
+    freqdata = []; posdata = []; kb = []; skb = []; alphax = []; alphay = []; salphax = []; salphay = []; currents = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -369,44 +390,44 @@ def main():
             print(res[0])
 
             # Check if future is from freq space
-            if len(res[1]) == 7:
+            if type(res[1]) is FrequencyData:
                 freqdata.append(res[1])
             else:
                 posdata.append(res[1])
 
-    for ftup in freqdata:
-        # plot_power_spectrum(ftup)
+    for fdata in freqdata:
+        # Plot the power spectra and move alphas to proper arrays
+        plot_power_spectrum(fdata)
+        alphax.append(fdata.alpha_x[0].value)
+        salphax.append(fdata.alpha_x[1].value)
+        alphay.append(fdata.alpha_y[0].value)
+        salphay.append(fdata.alpha_y[1].value)
+        currents.append(fdata.current)
 
-        for ptup in posdata:
-            if ptup[0] == ftup[0]:
-                kbx, kby, skbx, skby, alpha_x, alpha_y, salpha_x, salpha_y= extract_kb_alpha(ptup, ftup)
+        for pdata in posdata:
+            if pdata.dataname == fdata.dataname:
+                kbx, kby, skbx, skby = extract_kb(pdata, fdata)
                 kb.append(kbx.value)
                 skb.append(skbx.value)
                 kb.append(kby.value)
                 skb.append(skby.value)
-                alphax.append(alpha_x.value)
-                alphay.append(alpha_y.value)
-                salphax.append(salpha_x.value)
-                salphay.append(salpha_y.value)
-                currents.append(ftup[6])
-                #currents.append(ftup[6])
 
-    kb  = np.array(kb)
-    skb = np.array(skb)
-    alphax = np.array(alphax)
-    alphay = np.array(alphay)
-    salphax = np.array(salphax)
-    salphay = np.array(salphay)
+    kb       = np.array(kb)
+    skb      = np.array(skb)
+    alphax   = np.array(alphax)
+    alphay   = np.array(alphay)
+    salphax  = np.array(salphax)
+    salphay  = np.array(salphay)
     currents = np.array(currents)
 
     mu_kb = np.mean(kb)
     # s_kb  = np.sqrt(propagate(lambda a: np.mean(a), kb, skb)) <-- This is too narrow an uncertainty I think
-    s_kb  = np.sum(skb)
+    s_kb  = np.std(kb)
 
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
     print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(mu_kb, s_kb))
-    plot_kb(mu_kb,s_kb)
-    plot_current_dependence([alphax,alphay],[salphax,salphay],currents)
+    plot_kb(mu_kb, s_kb)
+    plot_current_dependence([alphax, alphay], [salphax, salphay], currents)
     plt.show()
 
 if __name__ == "__main__":
