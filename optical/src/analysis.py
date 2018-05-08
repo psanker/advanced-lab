@@ -64,18 +64,18 @@ def parse_line(line, dtype=np.float):
     return np.array(list(filter(lambda s: s != "", vals))).astype(dtype)
 
 # Physics functions... interesting :D
-# def propagate(f, arrx, arrsx, dx=1e-5):
-#     assert len(arrx) == len(arrsx)
+def propagate(f, arrx, arrsx, dx=1e-5):
+    assert len(arrx) == len(arrsx)
 
-#     dfdx2 = np.zeros((len(arrx), len(arrx)))
+    dfdx2 = np.zeros((len(arrx), len(arrx)))
 
-#     for i in range(len(arrx)):
-#         temp = arrx
-#         temp[i] += dx*1j
+    for i in range(len(arrx)):
+        temp = arrx + 0j
+        temp[i] += dx*1j
 
-#         dfdx2[i, i] = np.imag(f(temp) / dx)**2
+        dfdx2[i, i] = np.imag(f(temp) / dx)**2
 
-#     return (arrsx.T) @ dfdx2 @ arrsx
+    return (arrsx.T) @ dfdx2 @ arrsx
 
 def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     #    a*<x^2> = kbT
@@ -88,15 +88,16 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     x *= data[:, sumcolumn] * u.V
 
     # Corrected variance
-    mu = temp / (units * units * np.mean(x * x))
+    mu  = temp / (units**(-2) * np.mean(x * x))
+    smu = np.sqrt(propagate(lambda a: temp.value / (a[0]**(-2) * np.mean(x * x)), np.array([units.value]), np.array([sunits.value])))
 
     # Return with the corrected variance
-    return mu
+    return mu, smu * mu.unit
 
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
     # Reject first row to remove average
-    pspec = (data[1:, column])
+    pspec = (data[1:8000, column])
 
     #              kbT       <-- p0
     # P^2 = ----------------
@@ -106,7 +107,7 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
 
     p    = np.array([1e-6, 1e-3, 1.]) # Bad initial guess... Maybe should provide better guess
 
-    return curve_fit(func, data[1:, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
+    return curve_fit(func, data[1:8000, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
 
 def plot_power_spectrum(datatuple):
     dname = datatuple[0]
@@ -147,12 +148,12 @@ def process_frequency_data(filename, opts={}):
     outstring += "\n--------------------\n"
     outstring += "Fourier dataset \"{}\"\n".format(opts["dataname"])
 
-    outstring += "p0_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[0], covX[0, 0]**0.5)
-    outstring += "p0_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[0], covY[0, 0]**0.5)
-    outstring += "p1_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[1], covX[1, 1]**0.5)
-    outstring += "p1_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[1], covY[1, 1]**0.5)
-    outstring += "p2_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[2], covX[2, 2]**0.5)
-    outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}".format(paramsY[2], covY[2, 2]**0.5)
+    outstring += "p0_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[0], np.abs(covX[0, 0])**0.5)
+    outstring += "p0_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[0], np.abs(covY[0, 0])**0.5)
+    outstring += "p1_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[1], np.abs(covX[1, 1])**0.5)
+    outstring += "p1_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[1], np.abs(covY[1, 1])**0.5)
+    outstring += "p2_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[2], np.abs(covX[2, 2])**0.5)
+    outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}".format(paramsY[2], np.abs(covY[2, 2])**0.5)
 
     # This is broken lul
     # if not fromcache:
@@ -165,12 +166,12 @@ def process_position_data(filename, opts={}):
 
     data, fromcache = read_datfile(filename, opts["skiprows"])
 
-    akbx = get_alpha_kb_ratio(data, opts["T"], units=opts["convertX"])
-    akby = get_alpha_kb_ratio(data, opts["T"], column=1, units=opts["convertY"])
+    akbx, sakbx = get_alpha_kb_ratio(data, opts["T"], units=opts["convertX"], sunits=opts["uconvertX"])
+    akby, sakby = get_alpha_kb_ratio(data, opts["T"], column=1, units=opts["convertY"], sunits=opts["uconvertY"])
 
     outstring += "\n--------------------\n"
     outstring += "Position dataset \"{}\"\n".format(opts["dataname"])
-    outstring += "(\\alpha / k_B)_x = {0:1.4e}\n(\\alpha / k_B)_y = {1:1.4e}".format(akbx, akby)
+    outstring += "(\\alpha / k_B)_x = {0:1.3e} \\pm {1:1.3e}\n(\\alpha / k_B)_y = {2:1.3e} \\pm {3:1.3e}".format(akbx, sakbx, akby, sakby)
 
     if not fromcache:
         write_cache(filename, data)
@@ -180,17 +181,25 @@ def process_position_data(filename, opts={}):
 ##### EXECUTION #####
 T = 293.15 * u.K           # Assumed to be room temperature
 
-convertXdata1 = ((1. / 573.26e-3) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata1 = ((1. / 550.22e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata1 = ((573.26e-3) * (u.V / u.micron)).to(u.V / u.micron)
+convertYdata1 = ((550.22e-3) * (u.V / u.micron)).to(u.V / u.micron)
+uconvXdata1   = (.186e-3 * (u.V / u.micron)).to(u.V / u.micron)
+uconvYdata1   = (.223e-3 * (u.V / u.micron)).to(u.V / u.micron)
 
-convertXdata3 = ((1. / 683.89e-3) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata3 = ((1. / 559.76e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata3 = ((683.89e-3) * (u.V / u.micron)).to(u.V / u.micron)
+convertYdata3 = ((559.76e-3) * (u.V / u.micron)).to(u.V / u.micron)
+uconvXdata3   = (.166e-3 * (u.V / u.micron)).to(u.V / u.micron)
+uconvYdata3   = (.250e-3 * (u.V / u.micron)).to(u.V / u.micron)
 
-convertXdata4 = ((1. / 745.20e-3) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata4 = ((1. / 703.16e-3) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata4 = ((745.20e-3) * (u.V / u.micron)).to(u.V / u.micron)
+convertYdata4 = ((703.16e-3) * (u.V / u.micron)).to(u.V / u.micron)
+uconvXdata4   = (.15e-3 * (u.V / u.micron)).to(u.V / u.micron)
+uconvYdata4   = (.68e-3 * (u.V / u.micron)).to(u.V / u.micron)
 
-convertXdata5 = ((1. / 1.09) * (u.micron / u.V)).to(u.m / u.V)
-convertYdata5 = ((1. / 1.00) * (u.micron / u.V)).to(u.m / u.V)
+convertXdata5 = ((1.09) * (u.V / u.micron)).to(u.V / u.micron)
+convertYdata5 = ((1.00) * (u.V / u.micron)).to(u.V / u.micron)
+uconvXdata5   = (1.0e-3 * (u.V / u.micron)).to(u.V / u.micron)
+uconvYdata5   = (1.0e-3 * (u.V / u.micron)).to(u.V / u.micron)
 
 def main():
     dataset = []
@@ -204,6 +213,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata1,
             "convertY": convertYdata1,
+            "uconvertX": uconvXdata1,
+            "uconvertY": uconvYdata1,
             "T": T
         }))
 
@@ -212,6 +223,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata1,
             "convertY": convertYdata1,
+            "uconvertX": uconvXdata1,
+            "uconvertY": uconvYdata1,
             "T": T
         }))
 
@@ -220,6 +233,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata3,
             "convertY": convertYdata3,
+            "uconvertX": uconvXdata3,
+            "uconvertY": uconvYdata3,
             "T": T
         }))
 
@@ -228,6 +243,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata4,
             "convertY": convertYdata4,
+            "uconvertX": uconvXdata4,
+            "uconvertY": uconvYdata4,
             "T": T
         }))
 
@@ -236,6 +253,8 @@ def main():
             "skiprows": 2,
             "convertX": convertXdata5,
             "convertY": convertYdata5,
+            "uconvertX": uconvXdata5,
+            "uconvertY": uconvYdata5,
             "T": T
         }))
 
