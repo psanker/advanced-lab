@@ -187,10 +187,20 @@ def plot_kb(exp, unc, theory=1.381e-23):
 def plot_current_dependence(alphas, salphas, currents,conv=1e6):
     assert len(alphas[0]) == len(currents), 'Array dimensions do not match'
 
+    a  = np.append(alphas[0], alphas[1])
+    sa = np.append(salphas[0], salphas[1])
+    c  = np.append(currents, currents)
+
+    ptest = [1, 1]
+    popt, pcov = curve_fit(lambda x, *p: p[0]*x + p[1], c, a*conv, p0=ptest, sigma=sa*conv)
+
     plt.figure()
-    plt.errorbar(currents,alphas[0]*conv,yerr=salphas[0]*conv,fmt='o',markersize=3,label='x')
-    plt.errorbar(currents,alphas[1]*conv,yerr=salphas[1]*conv,fmt='o',markersize=3,label='y')
-    plt.ylim(0,12)
+    plt.errorbar(c, a*conv, yerr=sa*conv, fmt='.', markersize=3, label="Data")
+
+    x = np.linspace(0, 300, 100)
+    plt.plot(x, popt[0]*x + popt[1], label="Fit")
+
+    plt.ylim(0, 12)
     plt.title('Force Strength Dependence on Current')
     plt.xlabel('Current (mA)')
     plt.ylabel('$\\alpha$ ($\\mu N/m$)')
