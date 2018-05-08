@@ -154,12 +154,15 @@ def plot_kb(exp,unc,theory=1.381e-23):
     plt.axvline(theory, ls='--', color='k', label=('$k_B$={0:1.3e} $J/K$'.format(theory)))
     plt.legend(loc='lower left')
 
-def plot_current_dependence(alphas, salphas, currents):
-    # assert len(alphas) == 2*len(currents), 'Array dimensions do not match'
+def plot_current_dependence(alphas, salphas, currents,conv=1e6):
+    assert len(alphas[0]) == len(currents), 'Array dimensions do not match'
     plt.figure()
-    plt.errorbar(currents,alphas[0],yerr=salphas[0],fmt='o',markersize=3,label='x')
-    plt.errorbar(currents,alphas[1],yerr=salphas[1],fmt='o',markersize=3,label='y')
-    plt.ylim(0,1e-5)
+    plt.errorbar(currents,alphas[0]*conv,yerr=salphas[0]*conv,fmt='o',markersize=3,label='x')
+    plt.errorbar(currents,alphas[1]*conv,yerr=salphas[1]*conv,fmt='o',markersize=3,label='y')
+    plt.ylim(0,12)
+    plt.title('Force Strength Dependence on Current')
+    plt.xlabel('Current (mA)')
+    plt.ylabel('$\\alpha$ ($\\mu N/m$)')
     plt.legend()
 
 def plot_power_spectrum(datatuple):
