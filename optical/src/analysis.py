@@ -152,6 +152,8 @@ def plot_kb(exp,unc,theory=1.381e-23):
     plt.figure()
     plt.plot(x,norm.pdf(x, exp, unc), label=('$k_B$={0:1.3e} $\pm$ {1:1.3e} $J/K$'.format(exp, unc)))
     plt.axvline(theory, ls='--', color='k', label=('$k_B$={0:1.3e} $J/K$'.format(theory)))
+    plt.xlabel('J/K')
+    plt.title('Comparing Experimental Boltzmann to Theory')
     plt.legend(loc='lower left')
 
 def plot_current_dependence(alphas, salphas, currents,conv=1e6):
