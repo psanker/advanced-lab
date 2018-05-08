@@ -76,7 +76,7 @@ def propagate(f, arrx, arrsx, dx=1e-8):
 
         dfdx2[i, i] = np.imag(f(temp) / dx)**2 # Evaluate
 
-    return (arrsx.T) @ dfdx2 @ arrsx
+    return np.matmul(np.matmul((arrsx.T), dfdx2), arrsx)
 
 def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     #    a*<x^2> = kbT
