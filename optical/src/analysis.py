@@ -125,7 +125,7 @@ def interpret_alpha(p2, dp2, a=3.*u.micron):
 
     return alpha.to("N / m"), (salpha * alpha.unit).to("N / m")
 
-def extract_kb(postup, freqtup):
+def extract_kb_alpha(postup, freqtup):
     akbx, sakbx = postup[1]
     akby, sakby = postup[2]
     alpha_x, salpha_x = freqtup[4]
@@ -145,7 +145,7 @@ def extract_kb(postup, freqtup):
     print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_x, skb_x))
     print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_y, skb_y))
 
-    return kb_x, kb_y, skb_x, skb_y
+    return kb_x, kb_y, skb_x, skb_y, alpha_x, alpha_y, salpha_x, salpha_y
 
 def plot_kb(exp,unc,theory=1.381e-23):
     x = np.linspace(exp - 10*unc, exp + 10*unc, 100)
@@ -153,6 +153,12 @@ def plot_kb(exp,unc,theory=1.381e-23):
     plt.plot(x,norm.pdf(x, exp, unc), label=('$k_B$={0:1.3e} $\pm$ {1:1.3e} $J/K$'.format(exp, unc)))
     plt.axvline(theory, ls='--', color='k', label=('$k_B$={0:1.3e} $J/K$'.format(theory)))
     plt.legend(loc='lower left')
+
+def plot_current_dependence(alphas, salphas, currents):
+    assert len(alphas) == len(currents), 'Array dimensions do not match'
+    plt.figure()
+    plt.errorbar(currents,alphas,yerr=salphas,fmt='o',markersize=3)
+    plt.ylim(9e-7,2e-5)
 
 def plot_power_spectrum(datatuple):
     dname = datatuple[0]
@@ -252,11 +258,15 @@ convertYdata5 = ((1.00) * (u.V / u.micron))
 uconvXdata5   = (1.0e-3 * (u.V / u.micron))
 uconvYdata5   = (1.0e-3 * (u.V / u.micron))
 
+currents = np.array([200.0,200.0,89.9,89.9,200.0,200.0,275.5,275.0]) #miliAmps
+# currents = np.array([200.0,89.9,200.0,275.0])
 def main():
     freqdata = []
     posdata  = []
     kb  = []
     skb = []
+    alpha = []
+    salpha = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -349,18 +359,24 @@ def main():
                 posdata.append(res[1])
 
     for ftup in freqdata:
-        plot_power_spectrum(ftup)
+        # plot_power_spectrum(ftup)
 
         for ptup in posdata:
             if ptup[0] == ftup[0]:
-                kbx, kby, skbx, skby = extract_kb(ptup, ftup)
+                kbx, kby, skbx, skby, alpha_x, alpha_y, salpha_x, salpha_y= extract_kb_alpha(ptup, ftup)
                 kb.append(kbx.value)
                 skb.append(skbx.value)
                 kb.append(kby.value)
                 skb.append(skby.value)
+                alpha.append(alpha_x.value)
+                alpha.append(alpha_y.value)
+                salpha.append(salpha_x.value)
+                salpha.append(salpha_y.value)
 
     kb  = np.array(kb)
     skb = np.array(skb)
+    alpha = np.array(alpha)
+    salpha = np.array(salpha)
 
     mu_kb = np.mean(kb)
     # s_kb  = np.sqrt(propagate(lambda a: np.mean(a), kb, skb)) <-- This is too narrow an uncertainty I think
@@ -369,6 +385,7 @@ def main():
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
     print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(mu_kb, s_kb))
     plot_kb(mu_kb,s_kb)
+    plot_current_dependence(alpha,salpha,currents)
     plt.show()
 
 if __name__ == "__main__":
