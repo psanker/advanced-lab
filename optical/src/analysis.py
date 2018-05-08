@@ -104,7 +104,7 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
     def func(f, *p):
         return p[0] / (p[1]*f**2 + p[2])
 
-    p    = np.array([0.3, 0.3, 0.3]) # Bad initial guess... Maybe should provide better guess
+    p    = np.array([1e-6, 0.3, 1]) # Bad initial guess... Maybe should provide better guess
 
     return curve_fit(func, data[1:, 0], pspec, p0=p) # returns (params, cov matrix)
 
@@ -267,7 +267,7 @@ def main():
                 pY.append(res[3])
             else:
                 print(res)
-    
+
     plot_power_spectrum(dataset[0], pX[0], pY[0])
     plot_power_spectrum(dataset[1], pX[1], pY[1])
     plot_power_spectrum(dataset[2], pX[2], pY[2])
