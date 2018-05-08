@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 from astropy import units as u
 from scipy.optimize import curve_fit
+from scipy.stats import norm
 
 # I/O functions ... boring
 def read_datfile(filepath, skiprows=0, dtype=np.float64, skipcache=False):
@@ -145,6 +146,13 @@ def extract_kb(postup, freqtup):
     print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_y, skb_y))
 
     return kb_x, kb_y, skb_x, skb_y
+
+def plot_kb(exp,unc,theory=1.381e-23):
+    x = np.linspace(exp - 10*unc, exp + 10*unc, 100)
+    plt.figure()
+    plt.plot(x,norm.pdf(x, exp, unc), label=('$k_B$={0:1.3e} $\pm$ {1:1.3e} $J/K$'.format(exp, unc)))
+    plt.axvline(theory, ls='--', color='k', label=('$k_B$={0:1.3e} $J/K$'.format(theory)))
+    plt.legend(loc='lower left')
 
 def plot_power_spectrum(datatuple):
     dname = datatuple[0]
@@ -360,7 +368,7 @@ def main():
 
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
     print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(mu_kb, s_kb))
-
+    plot_kb(mu_kb,s_kb)
     plt.show()
 
 if __name__ == "__main__":
