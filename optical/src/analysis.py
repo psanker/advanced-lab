@@ -155,10 +155,12 @@ def plot_kb(exp,unc,theory=1.381e-23):
     plt.legend(loc='lower left')
 
 def plot_current_dependence(alphas, salphas, currents):
-    assert len(alphas) == len(currents), 'Array dimensions do not match'
+    # assert len(alphas) == 2*len(currents), 'Array dimensions do not match'
     plt.figure()
-    plt.errorbar(currents,alphas,yerr=salphas,fmt='o',markersize=3)
-    plt.ylim(9e-7,2e-5)
+    plt.errorbar(currents,alphas[0],yerr=salphas[0],fmt='o',markersize=3,label='x')
+    plt.errorbar(currents,alphas[1],yerr=salphas[1],fmt='o',markersize=3,label='y')
+    plt.ylim(0,1e-5)
+    plt.legend()
 
 def plot_power_spectrum(datatuple):
     dname = datatuple[0]
@@ -216,7 +218,7 @@ def process_frequency_data(filename, opts={}):
     # if not fromcache:
     #     write_cache(filename, data)
 
-    return outstring, (opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y))
+    return outstring, (opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y),opts["current"])
 
 def process_position_data(filename, opts={}):
     outstring = ""
@@ -242,31 +244,36 @@ convertXdata1 = ((573.26e-3) * (u.V / u.micron))
 convertYdata1 = ((550.22e-3) * (u.V / u.micron))
 uconvXdata1   = (.186e-3 * (u.V / u.micron))
 uconvYdata1   = (.223e-3 * (u.V / u.micron))
+current1      = 200.0
 
 convertXdata3 = ((683.89e-3) * (u.V / u.micron))
 convertYdata3 = ((559.76e-3) * (u.V / u.micron))
 uconvXdata3   = (.166e-3 * (u.V / u.micron))
 uconvYdata3   = (.250e-3 * (u.V / u.micron))
+current3      = 89.9
 
 convertXdata4 = ((745.20e-3) * (u.V / u.micron))
 convertYdata4 = ((703.16e-3) * (u.V / u.micron))
 uconvXdata4   = (.15e-3 * (u.V / u.micron))
 uconvYdata4   = (.68e-3 * (u.V / u.micron))
+current4      = 200.0
 
 convertXdata5 = ((1.09) * (u.V / u.micron))
 convertYdata5 = ((1.00) * (u.V / u.micron))
 uconvXdata5   = (1.0e-3 * (u.V / u.micron))
 uconvYdata5   = (1.0e-3 * (u.V / u.micron))
+current5      = 275.0
 
-currents = np.array([200.0,200.0,89.9,89.9,200.0,200.0,275.5,275.0]) #miliAmps
-# currents = np.array([200.0,89.9,200.0,275.0])
 def main():
     freqdata = []
     posdata  = []
     kb  = []
     skb = []
-    alpha = []
-    salpha = []
+    alphax = []
+    alphay = []
+    salphax = []
+    salphay = []
+    currents = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -325,25 +332,29 @@ def main():
         futures.append(pool.submit(process_frequency_data, "../data/freq1.FDdat", opts={
             "dataname": "Data 1",
             "skiprows": 4,
-            "T": T
+            "T": T,
+            "current": current1
         }))
 
         futures.append(pool.submit(process_frequency_data, "../data/freq3.FDdat", opts={
             "dataname": "Data 3",
             "skiprows": 4,
-            "T": T
+            "T": T,
+            "current": current3
         }))
 
         futures.append(pool.submit(process_frequency_data, "../data/freq4.FDdat", opts={
             "dataname": "Data 4",
             "skiprows": 4,
-            "T": T
+            "T": T,
+            "current": current4
         }))
 
         futures.append(pool.submit(process_frequency_data, "../data/freq5.FDdat", opts={
             "dataname": "Data 5",
             "skiprows": 4,
-            "T": T
+            "T": T,
+            "current": current5
         }))
 
         for x in wait(futures)[0]:
@@ -353,7 +364,7 @@ def main():
             print(res[0])
 
             # Check if future is from freq space
-            if len(res[1]) == 6:
+            if len(res[1]) == 7:
                 freqdata.append(res[1])
             else:
                 posdata.append(res[1])
@@ -368,15 +379,20 @@ def main():
                 skb.append(skbx.value)
                 kb.append(kby.value)
                 skb.append(skby.value)
-                alpha.append(alpha_x.value)
-                alpha.append(alpha_y.value)
-                salpha.append(salpha_x.value)
-                salpha.append(salpha_y.value)
+                alphax.append(alpha_x.value)
+                alphay.append(alpha_y.value)
+                salphax.append(salpha_x.value)
+                salphay.append(salpha_y.value)
+                currents.append(ftup[6])
+                #currents.append(ftup[6])
 
     kb  = np.array(kb)
     skb = np.array(skb)
-    alpha = np.array(alpha)
-    salpha = np.array(salpha)
+    alphax = np.array(alphax)
+    alphay = np.array(alphay)
+    salphax = np.array(salphax)
+    salphay = np.array(salphay)
+    currents = np.array(currents)
 
     mu_kb = np.mean(kb)
     # s_kb  = np.sqrt(propagate(lambda a: np.mean(a), kb, skb)) <-- This is too narrow an uncertainty I think
@@ -385,7 +401,7 @@ def main():
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
     print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(mu_kb, s_kb))
     plot_kb(mu_kb,s_kb)
-    plot_current_dependence(alpha,salpha,currents)
+    plot_current_dependence([alphax,alphay],[salphax,salphay],currents)
     plt.show()
 
 if __name__ == "__main__":
