@@ -85,10 +85,10 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     x = data[:, column] - np.mean(data[:, column])
 
     # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
-    x *= data[:, sumcolumn] * u.V
+    x *= data[:, sumcolumn]
 
     # Corrected variance
-    mu  = temp / (units**(-2) * np.mean(x * x))
+    mu  = temp / (np.mean(x * x)*(u.V)**2 / (units**2))
     smu = np.sqrt(propagate(lambda a: temp.value / (a[0]**(-2) * np.mean(x * x)), np.array([units.value]), np.array([sunits.value])))
 
     # Return with the corrected variance
@@ -97,7 +97,7 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
 def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power spec; column=2: y power spec
     # Data in the power spectrum data needs to be squared
     # Reject first row to remove average
-    pspec = (data[1:8000, column])
+    pspec = (data[1:, column])
 
     #              kbT       <-- p0
     # P^2 = ----------------
@@ -105,9 +105,45 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
     def func(f, *p):
         return p[0] / (p[1]*f**2 + p[1]*p[2]**2)
 
-    p    = np.array([1e-6, 1e-3, 1.]) # Bad initial guess... Maybe should provide better guess
+    p    = np.array([1e-6, 1e-6, 1.]) # Bad initial guess... Maybe should provide better guess
 
-    return curve_fit(func, data[1:8000, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
+    return curve_fit(func, data[1:, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
+
+def interpret_alpha(p2, dp2, a=3.01*u.micron):
+    # Extract the spring constant from the cornering frequency
+    TWO_PI    = 2.*np.pi
+    eta       = 8.90e-4 * (u.Pa * u.s)
+    twopibeta = 6. * TWO_PI * eta * a
+
+    P2  = p2 * (1 / u.s)
+    DP2 = dp2 * (1 / u.s)
+
+    alpha  = twopibeta * np.abs(P2)
+    salpha = np.sqrt(propagate(lambda a: twopibeta.value * a[0], np.array([P2.value]), np.array([DP2.value])))
+
+    return alpha.to("N / m"), (salpha * alpha.unit).to("N / m")
+
+def extract_kb(postup, freqtup):
+    akbx, sakbx = postup[1]
+    akby, sakby = postup[2]
+    alpha_x, salpha_x = freqtup[4]
+    alpha_y, salpha_y = freqtup[5]
+
+    kb_x = ((1 / akbx) * alpha_x)
+    kb_y = ((1 / akby) * alpha_y)
+
+    skb_x = np.sqrt(propagate(lambda a: (1 / a[0])*a[1], np.array([akbx.value, alpha_x.value]), np.array([sakbx.value, salpha_x.value])))
+    skb_y = np.sqrt(propagate(lambda a: (1 / a[0])*a[1], np.array([akby.value, alpha_y.value]), np.array([sakby.value, salpha_y.value])))
+
+    skb_x = (skb_x * kb_x.unit).to("J / K") 
+    kb_x  = (kb_x).to("J / K")
+    skb_y = (skb_y * kb_y.unit).to("J / K") 
+    kb_y  = (kb_y).to("J / K")
+
+    print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_x, skb_x))
+    print("\"{0}\" kB_y: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_y, skb_y))
+
+    return kb_x, kb_y
 
 def plot_power_spectrum(datatuple):
     dname = datatuple[0]
@@ -153,13 +189,19 @@ def process_frequency_data(filename, opts={}):
     outstring += "p1_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[1], np.abs(covX[1, 1])**0.5)
     outstring += "p1_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[1], np.abs(covY[1, 1])**0.5)
     outstring += "p2_x = {0:1.3e} \\pm {1:1.3e}\n".format(paramsX[2], np.abs(covX[2, 2])**0.5)
-    outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}".format(paramsY[2], np.abs(covY[2, 2])**0.5)
+    outstring += "p2_y = {0:1.3e} \\pm {1:1.3e}\n".format(paramsY[2], np.abs(covY[2, 2])**0.5)
+
+    alpha_x, salpha_x = interpret_alpha(paramsX[2], np.abs(covX[2, 2])**0.5)
+    alpha_y, salpha_y = interpret_alpha(paramsY[2], np.abs(covY[2, 2])**0.5)
+
+    outstring += "\\alpha_x = {0:1.3e} \\pm {1:1.3e}\n".format(alpha_x, salpha_x)
+    outstring += "\\alpha_y = {0:1.3e} \\pm {1:1.3e}".format(alpha_y, salpha_y)
 
     # This is broken lul
     # if not fromcache:
     #     write_cache(filename, data)
 
-    return outstring, (opts["dataname"], data, paramsX, paramsY)
+    return outstring, (opts["dataname"], data, paramsX, paramsY, (alpha_x, salpha_x), (alpha_y, salpha_y))
 
 def process_position_data(filename, opts={}):
     outstring = ""
@@ -176,33 +218,35 @@ def process_position_data(filename, opts={}):
     if not fromcache:
         write_cache(filename, data)
 
-    return outstring
+    return outstring, (opts["dataname"], (akbx, sakbx), (akby, sakby))
 
 ##### EXECUTION #####
 T = 293.15 * u.K           # Assumed to be room temperature
 
-convertXdata1 = ((573.26e-3) * (u.V / u.micron)).to(u.V / u.micron)
-convertYdata1 = ((550.22e-3) * (u.V / u.micron)).to(u.V / u.micron)
-uconvXdata1   = (.186e-3 * (u.V / u.micron)).to(u.V / u.micron)
-uconvYdata1   = (.223e-3 * (u.V / u.micron)).to(u.V / u.micron)
+convertXdata1 = ((573.26e-3) * (u.V / u.micron))
+convertYdata1 = ((550.22e-3) * (u.V / u.micron))
+uconvXdata1   = (.186e-3 * (u.V / u.micron))
+uconvYdata1   = (.223e-3 * (u.V / u.micron))
 
-convertXdata3 = ((683.89e-3) * (u.V / u.micron)).to(u.V / u.micron)
-convertYdata3 = ((559.76e-3) * (u.V / u.micron)).to(u.V / u.micron)
-uconvXdata3   = (.166e-3 * (u.V / u.micron)).to(u.V / u.micron)
-uconvYdata3   = (.250e-3 * (u.V / u.micron)).to(u.V / u.micron)
+convertXdata3 = ((683.89e-3) * (u.V / u.micron))
+convertYdata3 = ((559.76e-3) * (u.V / u.micron))
+uconvXdata3   = (.166e-3 * (u.V / u.micron))
+uconvYdata3   = (.250e-3 * (u.V / u.micron))
 
-convertXdata4 = ((745.20e-3) * (u.V / u.micron)).to(u.V / u.micron)
-convertYdata4 = ((703.16e-3) * (u.V / u.micron)).to(u.V / u.micron)
-uconvXdata4   = (.15e-3 * (u.V / u.micron)).to(u.V / u.micron)
-uconvYdata4   = (.68e-3 * (u.V / u.micron)).to(u.V / u.micron)
+convertXdata4 = ((745.20e-3) * (u.V / u.micron))
+convertYdata4 = ((703.16e-3) * (u.V / u.micron))
+uconvXdata4   = (.15e-3 * (u.V / u.micron))
+uconvYdata4   = (.68e-3 * (u.V / u.micron))
 
-convertXdata5 = ((1.09) * (u.V / u.micron)).to(u.V / u.micron)
-convertYdata5 = ((1.00) * (u.V / u.micron)).to(u.V / u.micron)
-uconvXdata5   = (1.0e-3 * (u.V / u.micron)).to(u.V / u.micron)
-uconvYdata5   = (1.0e-3 * (u.V / u.micron)).to(u.V / u.micron)
+convertXdata5 = ((1.09) * (u.V / u.micron))
+convertYdata5 = ((1.00) * (u.V / u.micron))
+uconvXdata5   = (1.0e-3 * (u.V / u.micron))
+uconvYdata5   = (1.0e-3 * (u.V / u.micron))
 
 def main():
-    dataset = []
+    freqdata = []
+    posdata  = []
+    kb = []
 
     # By default, the pool executor only spins off 5 threads. This should be enough for us.
     with ProcessPoolExecutor(max_workers=5) as pool:
@@ -285,15 +329,26 @@ def main():
         for x in wait(futures)[0]:
             res = x.result()
 
-            # Check if future is from freq space
-            if type(res) is tuple:
-                print(res[0])
-                dataset.append(res[1])
-            else:
-                print(res)
+            print(res[0])
 
-    for tup in dataset:
-        plot_power_spectrum(tup)
+            # Check if future is from freq space
+            if len(res[1]) == 6:
+                freqdata.append(res[1])
+            else:
+                posdata.append(res[1])
+
+    for ftup in freqdata:
+        plot_power_spectrum(ftup)
+
+        for ptup in posdata:
+            if ptup[0] == ftup[0]:
+                kbx, kby = extract_kb(ptup, ftup)
+                kb.append(kbx.value)
+                kb.append(kby.value)
+
+    kb = np.array(kb)
+    print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
+    print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(np.mean(kb), np.std(kb)))
 
     plt.show()
 
