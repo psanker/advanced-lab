@@ -106,7 +106,7 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
     def func(f, *p):
         return p[0] / (p[1]*(f**2 + p[2]**2))
 
-    p    = np.array([1e-6, 1e-6, 1.]) # Bad initial guess... Maybe should provide better guess
+    p    = np.array([1e-6, 0.3, 1]) # Bad initial guess... Maybe should provide better guess
 
     return curve_fit(func, data[1:, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
 
@@ -136,9 +136,9 @@ def extract_kb(postup, freqtup):
     skb_x = np.sqrt(propagate(lambda a: (1 / a[0])*a[1], np.array([akbx.value, alpha_x.value]), np.array([sakbx.value, salpha_x.value])))
     skb_y = np.sqrt(propagate(lambda a: (1 / a[0])*a[1], np.array([akby.value, alpha_y.value]), np.array([sakby.value, salpha_y.value])))
 
-    skb_x = (skb_x * kb_x.unit).to("J / K") 
+    skb_x = (skb_x * kb_x.unit).to("J / K")
     kb_x  = (kb_x).to("J / K")
-    skb_y = (skb_y * kb_y.unit).to("J / K") 
+    skb_y = (skb_y * kb_y.unit).to("J / K")
     kb_y  = (kb_y).to("J / K")
 
     print("\"{0}\" kB_x: {1:1.3e} \\pm {2:1.3e}".format(postup[0], kb_x, skb_x))
