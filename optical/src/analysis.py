@@ -85,7 +85,7 @@ def get_alpha_kb_ratio(data, temp, column=0, units=1., sunits=1., sumcolumn=2):
     x = data[:, column] - np.mean(data[:, column])
 
     # According to manual, X and Y may be normalized by SUM. So, de-normalize; also, add units
-    x *= data[:, sumcolumn]
+    # x *= data[:, sumcolumn] <-- Apparently this throws things off?
 
     # Corrected variance
     mu  = temp / (np.mean(x * x)*(u.V)**2 / (units**2))
@@ -101,7 +101,7 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
 
     #              kbT       <-- p0
     # P^2 = ----------------
-    #         p1*f^2 + p2
+    #       p1*(f^2 + p2^2)
     def func(f, *p):
         return p[0] / (p[1]*f**2 + p[1]*p[2]**2)
 
@@ -109,17 +109,17 @@ def fit_power_spectrum(data, temp, column=1, sumcolumn=3): # column=1: x power s
 
     return curve_fit(func, data[1:, 0], pspec, p0=p, method="lm") # returns (params, cov matrix)
 
-def interpret_alpha(p2, dp2, a=3.01*u.micron):
+def interpret_alpha(p2, dp2, a=3.*u.micron):
     # Extract the spring constant from the cornering frequency
     TWO_PI    = 2.*np.pi
     eta       = 8.90e-4 * (u.Pa * u.s)
-    twopibeta = 6. * TWO_PI * eta * a
+    beta = 3. * TWO_PI * eta * a
 
     P2  = p2 * (1 / u.s)
     DP2 = dp2 * (1 / u.s)
 
-    alpha  = twopibeta * np.abs(P2)
-    salpha = np.sqrt(propagate(lambda a: twopibeta.value * a[0], np.array([P2.value]), np.array([DP2.value])))
+    alpha  = TWO_PI * beta * np.abs(P2)
+    salpha = np.sqrt(propagate(lambda a: (TWO_PI * beta).value * a[0], np.array([P2.value]), np.array([DP2.value])))
 
     return alpha.to("N / m"), (salpha * alpha.unit).to("N / m")
 
@@ -155,7 +155,7 @@ def plot_power_spectrum(datatuple):
     ax[0].plot(data[1:, 0], data[1:, 1])
 
     def func(f, p):
-        return p[0] / (p[1]*f**2 + p[1]*p[2]**2)
+        return p[0] / (p[1]*(f**2 + p[2]**2))
 
     freq = np.linspace(0, np.amax(data[:, 0]), 80000)
     ax[0].plot(freq, func(freq, pX))
