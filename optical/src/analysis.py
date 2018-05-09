@@ -184,7 +184,7 @@ def plot_kb(exp, unc, theory=1.381e-23):
     plt.title('Comparing Experimental Boltzmann to Theory')
     plt.legend(loc='upper right')
 
-def plot_current_dependence(alphas, salphas, currents,conv=1e6):
+def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=True):
     assert len(alphas[0]) == len(currents), 'Array dimensions do not match'
 
     a  = np.append(alphas[0], alphas[1])
@@ -199,6 +199,19 @@ def plot_current_dependence(alphas, salphas, currents,conv=1e6):
 
     x = np.linspace(0, 300, 100)
     plt.plot(x, popt[0]*x + popt[1], label="Fit")
+
+    if filterhigh:
+        af  = []; saf = []; cf  = [] 
+
+        for i in range(len(c)):
+            if c[i] != 275.0:
+                af.append(a[i])
+                saf.append(sa[i])
+                cf.append(c[i])
+
+        af = np.array(af); saf = np.array(saf); cf = np.array(cf)
+        poptf, pcovf = curve_fit(lambda x, *p: p[0]*x + p[1], cf, af*conv, p0=ptest, sigma=saf*conv)
+        plt.plot(x, poptf[0]*x + poptf[1], "r--", label="Fit w/o 275mA", alpha=0.4)
 
     plt.ylim(0, 12)
     plt.title('Force Strength Dependence on Current')
@@ -430,9 +443,11 @@ def main():
     salphay  = np.array(salphay)
     currents = np.array(currents)
 
-    mu_kb = np.mean(kb)
-    # s_kb  = np.sqrt(propagate(lambda a: np.mean(a), kb, skb)) <-- This is too narrow an uncertainty I think
-    s_kb  = np.std(kb)
+    mu_kb   = np.mean(kb)
+    s_kb_1  = np.sqrt(propagate(lambda a: np.mean(a), kb, skb))
+    s_kb_2  = np.std(kb)
+    s_kb_3  = np.sum(skb)
+    s_kb = np.mean(np.array([s_kb_1, s_kb_2, s_kb_3]))
 
     print("\n===== DETERMINED VALUE OF BOLTZMANN'S CONSTANT =====\n")
     print("kB = {0:1.3e} \\pm {1:1.3e} J / K\n".format(mu_kb, s_kb))
