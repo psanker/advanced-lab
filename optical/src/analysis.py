@@ -220,10 +220,11 @@ def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=True
     plt.legend()
 
 def plot_power_spectrum(freqdat):
-    dname = freqdat.dataname
-    data  = freqdat.data
-    pX    = freqdat.paramsX
-    pY    = freqdat.paramsY
+    dname   = freqdat.dataname
+    data    = freqdat.data
+    pX      = freqdat.paramsX
+    pY      = freqdat.paramsY
+    current = freqdat.current
 
     fig, ax = plt.subplots(2)
     ax[0].plot(data[1:, 0], data[1:, 1])
@@ -236,16 +237,16 @@ def plot_power_spectrum(freqdat):
 
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
-    ax[0].set_xlabel("{0} - Frequency ($Hz$)".format(dname))
-    ax[0].set_ylabel("Power Spectrum in X ($V^2 / Hz$)")
+    ax[0].set_xlabel("{0} ({1:1.0f} $mA$) - Frequency ($Hz$)".format(dname, current))
+    ax[0].set_ylabel("X Power Spectrum ($V^2 / Hz$)")
 
     ax[1].plot(data[1:, 0], data[1:, 2])
     ax[1].plot(freq, func(freq, pY))
 
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
-    ax[1].set_xlabel("{0} - Frequency ($Hz$)".format(dname))
-    ax[1].set_ylabel("Power Spectrum in Y ($V^2 / Hz$)")
+    ax[1].set_xlabel("{0} ({1:1.0f} $mA$) - Frequency ($Hz$)".format(dname, current))
+    ax[1].set_ylabel("Y Power Spectrum ($V^2 / Hz$)")
 
 def process_frequency_data(filename, opts={}):
     outstring = ""
