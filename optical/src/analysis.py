@@ -184,7 +184,7 @@ def plot_kb(exp, unc, theory=1.381e-23):
     plt.title('Comparing Experimental Boltzmann to Theory')
     plt.legend(loc='upper right')
 
-def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=True):
+def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=False,filterone=True):
     assert len(alphas[0]) == len(currents), 'Array dimensions do not match'
 
     a  = np.append(alphas[0], alphas[1])
@@ -201,7 +201,7 @@ def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=True
     plt.plot(x, popt[0]*x + popt[1], label="Fit")
 
     if filterhigh:
-        af  = []; saf = []; cf  = [] 
+        af  = []; saf = []; cf  = []
 
         for i in range(len(c)):
             if c[i] != 275.0:
@@ -414,7 +414,7 @@ def main():
             print(res[0])
 
             # Check if future is from freq space
-            if type(res[1]) is FrequencyData:
+            if len(res[0]) > 181.0:
                 freqdata.append(res[1])
             else:
                 posdata.append(res[1])
