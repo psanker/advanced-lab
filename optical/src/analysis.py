@@ -184,7 +184,7 @@ def plot_kb(exp, unc, theory=1.381e-23):
     plt.title('Comparing Experimental Boltzmann to Theory')
     plt.legend(loc='upper right')
 
-def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=False,filterone=True):
+def plot_current_dependence(alphas, salphas, currents, conv=1e6, filterhigh=True):
     assert len(alphas[0]) == len(currents), 'Array dimensions do not match'
 
     a  = np.append(alphas[0], alphas[1])
